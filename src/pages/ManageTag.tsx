@@ -24,8 +24,11 @@ import {
   Clock,
   Upload,
   Image as ImageIcon,
-  Check
-
+  Check,
+  CornerDownRight,
+  Send,
+  ShieldCheck,
+  User
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -42,6 +45,11 @@ export default function ManageTag() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [mobileTab, setMobileTab] = useState<'editor' | 'preview'>('editor');
+
+  // Balas masukan tamu oleh Admin di CMS
+  const [activeReplyFbId, setActiveReplyFbId] = useState<string | null>(null);
+  const [replyAdminText, setReplyAdminText] = useState('');
+  const [adminName, setAdminName] = useState('Admin Resto');
 
   // Uploading states
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -156,6 +164,52 @@ export default function ManageTag() {
     const updated = feedbacks.filter((f) => f.id !== id);
     setFeedbacks(updated);
     toast.success('Masukan berhasil dihapus dari daftar.');
+  }
+
+  function handleAdminReply(feedbackId: string) {
+    if (!replyAdminText.trim()) {
+      toast.error('Tuliskan balasan admin terlebih dahulu.');
+      return;
+    }
+
+    const updated = feedbacks.map((fb) => {
+      if (fb.id === feedbackId) {
+        const currentReplies = fb.replies || [];
+        return {
+          ...fb,
+          replies: [
+            ...currentReplies,
+            {
+              id: `rep-${Date.now()}`,
+              sender: 'admin' as const,
+              sender_name: adminName.trim() || 'Admin Resto',
+              message: replyAdminText.trim(),
+              created_at: new Date().toISOString()
+            }
+          ]
+        };
+      }
+      return fb;
+    });
+
+    setFeedbacks(updated);
+    setReplyAdminText('');
+    setActiveReplyFbId(null);
+    toast.success('Balasan admin berhasil ditambahkan! Jangan lupa klik "Simpan Perubahan".');
+  }
+
+  function handleDeleteReply(feedbackId: string, replyId: string) {
+    const updated = feedbacks.map((fb) => {
+      if (fb.id === feedbackId) {
+        return {
+          ...fb,
+          replies: (fb.replies || []).filter((r) => r.id !== replyId)
+        };
+      }
+      return fb;
+    });
+    setFeedbacks(updated);
+    toast.success('Balasan berhasil dihapus.');
   }
 
   function handleLinkChange(index: number, field: keyof CustomLink, value: any) {
@@ -656,7 +710,10 @@ export default function ManageTag() {
                       className="p-3.5 rounded-2xl border border-slate-200/80 bg-slate-50/50 flex flex-col gap-2 transition-all hover:bg-slate-50"
                     >
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-slate-900">
+                            {fb.sender_name || 'Tamu Meja'}
+                          </span>
                           {fb.rating && (
                             <div className="flex items-center text-amber-400 text-xs">
                               {Array.from({ length: fb.rating }).map((_, i) => (
@@ -664,7 +721,7 @@ export default function ManageTag() {
                               ))}
                             </div>
                           )}
-                          <span className="text-[10px] text-slate-400 flex items-center gap-1">
+                          <span className="text-[10px] text-slate-400 flex items-center gap-1 ml-1">
                             <Clock className="h-3 w-3" />
                             {new Date(fb.created_at).toLocaleString('id-ID', {
                               dateStyle: 'medium',
@@ -683,9 +740,121 @@ export default function ManageTag() {
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>
                       </div>
+
                       <p className="text-xs text-slate-800 leading-relaxed font-normal bg-white p-2.5 rounded-xl border border-slate-100">
                         "{fb.comment}"
                       </p>
+
+                      {/* Thread Balasan di CMS */}
+                      {fb.replies && fb.replies.length > 0 && (
+                        <div className="pl-3 space-y-1.5 border-l-2 border-slate-200 mt-1">
+                          {fb.replies.map((rep) => (
+                            <div
+                              key={rep.id}
+                              className={`p-2 rounded-xl text-left text-xs flex items-start justify-between gap-2 ${
+                                rep.sender === 'admin'
+                                  ? 'bg-amber-50/80 border border-amber-200/90 text-amber-950'
+                                  : 'bg-white border border-slate-200 text-slate-800'
+                              }`}
+                            >
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-1.5 mb-0.5">
+                                  <span className="font-bold text-[11px] flex items-center gap-1">
+                                    {rep.sender === 'admin' ? (
+                                      <>
+                                        <ShieldCheck className="w-3.5 h-3.5 text-amber-600" />
+                                        <span>{rep.sender_name || 'Admin Resto'}</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <User className="w-3.5 h-3.5 text-slate-500" />
+                                        <span>{rep.sender_name || 'Tamu'}</span>
+                                      </>
+                                    )}
+                                  </span>
+                                  <span className="text-[9px] text-slate-400">
+                                    {new Date(rep.created_at).toLocaleTimeString('id-ID', {
+                                      hour: '2-digit',
+                                      minute: '2-digit'
+                                    })}
+                                  </span>
+                                </div>
+                                <p className="text-xs leading-snug">{rep.message}</p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteReply(fb.id, rep.id)}
+                                className="text-slate-400 hover:text-red-600 p-0.5 rounded cursor-pointer"
+                                title="Hapus balasan"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Tombol Buka Input Balas dari Admin */}
+                      <div className="flex items-center justify-between pt-1">
+                        <span className="text-[10px] text-slate-400">
+                          {fb.replies?.length ? `${fb.replies.length} balasan` : 'Belum dibalas'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (activeReplyFbId === fb.id) {
+                              setActiveReplyFbId(null);
+                            } else {
+                              setActiveReplyFbId(fb.id);
+                              setReplyAdminText('');
+                            }
+                          }}
+                          className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 hover:text-amber-900 bg-amber-50 hover:bg-amber-100 px-2.5 py-1 rounded-lg border border-amber-200 transition-colors cursor-pointer"
+                        >
+                          <CornerDownRight className="w-3 h-3" />
+                          <span>{activeReplyFbId === fb.id ? 'Batal Balas' : 'Balas sebagai Admin'}</span>
+                        </button>
+                      </div>
+
+                      {/* Input Balasan Admin */}
+                      {activeReplyFbId === fb.id && (
+                        <div className="p-2.5 rounded-xl bg-amber-50/50 border border-amber-200 space-y-2 animate-in fade-in duration-150">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-bold text-amber-900">Nama Pengirim:</span>
+                            <input
+                              type="text"
+                              value={adminName}
+                              onChange={(e) => setAdminName(e.target.value)}
+                              placeholder="Nama Admin / Resto"
+                              className="text-xs px-2.5 py-1 rounded-lg border border-amber-200 bg-white"
+                            />
+                          </div>
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              value={replyAdminText}
+                              onChange={(e) => setReplyAdminText(e.target.value)}
+                              placeholder="Tulis balasan resmi resto..."
+                              className="flex-1 text-xs px-3 py-1.5 rounded-lg border border-amber-200 bg-white focus:outline-none focus:ring-1 focus:ring-amber-500"
+                              autoFocus
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' && !e.shiftKey) {
+                                  e.preventDefault();
+                                  handleAdminReply(fb.id);
+                                }
+                              }}
+                            />
+                            <Button
+                              type="button"
+                              size="sm"
+                              onClick={() => handleAdminReply(fb.id)}
+                              className="bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-lg h-8 px-3"
+                            >
+                              <Send className="w-3.5 h-3.5 mr-1" /> Balas
+                            </Button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))
                 )}

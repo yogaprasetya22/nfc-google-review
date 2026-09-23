@@ -21,11 +21,21 @@ export interface CustomLink {
   enabled?: boolean; // Toggle aktif / nonaktif tombol
 }
 
+export interface FeedbackReply {
+  id: string;
+  sender: 'admin' | 'guest';
+  sender_name?: string;
+  message: string;
+  created_at: string;
+}
+
 export interface FeedbackItem {
   id: string;
+  sender_name?: string;
   comment: string;
   rating?: number; // 1-5 bintang opsional
   created_at: string;
+  replies?: FeedbackReply[];
 }
 
 export interface HubConfiguration {

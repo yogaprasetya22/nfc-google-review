@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { NfcTagEntity, FeedbackItem } from '@/types/nfc';
 import { LinkIconBadge } from './LinkIconBadge';
-import { ExternalLink, Camera, Settings2, Gift, Play, Music, Sparkles, Wifi as WifiIcon, Copy, X, Check, QrCode, MessageSquare, Send, Star, Loader2 } from 'lucide-react';
+import { ExternalLink, Camera, Settings2, Gift, Play, Music, Sparkles, Wifi as WifiIcon, Copy, X, Check, QrCode, MessageSquare, Send, Star, Loader2, MessageCircle, CornerDownRight, ShieldCheck, User } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 
@@ -19,10 +19,16 @@ export function TableHubPortal({ tag, reviewUrl }: TableHubPortalProps) {
 
   // State untuk Anonymous Feedback Modal
   const [feedbackModalOpen, setFeedbackModalOpen] = useState(false);
+  const [guestName, setGuestName] = useState('');
   const [commentText, setCommentText] = useState('');
   const [rating, setRating] = useState<number>(5);
   const [submittingFeedback, setSubmittingFeedback] = useState(false);
   const [feedbacksList, setFeedbacksList] = useState<FeedbackItem[]>(cfg.feedbacks || []);
+
+  // State untuk balas komentar di portal
+  const [activeReplyFbId, setActiveReplyFbId] = useState<string | null>(null);
+  const [replyText, setReplyText] = useState('');
+  const [submittingReply, setSubmittingReply] = useState(false);
 
   const linksToRender = (cfg.custom_links && cfg.custom_links.length > 0
     ? cfg.custom_links
@@ -68,7 +74,7 @@ export function TableHubPortal({ tag, reviewUrl }: TableHubPortalProps) {
     }
   };
 
-  // Kirim feedback anonim ke Supabase khusus tag ini
+  // Kirim feedback tamu ke Supabase khusus tag ini
   const handleSubmitFeedback = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!commentText.trim()) {
@@ -79,15 +85,16 @@ export function TableHubPortal({ tag, reviewUrl }: TableHubPortalProps) {
     setSubmittingFeedback(true);
     const newFeedback: FeedbackItem = {
       id: `fb-${Date.now()}`,
+      sender_name: guestName.trim() || 'Tamu Meja',
       comment: commentText.trim(),
       rating,
-      created_at: new Date().toISOString()
+      created_at: new Date().toISOString(),
+      replies: []
     };
 
     const updatedFeedbacks = [newFeedback, ...feedbacksList];
 
     try {
-      // Ambil config terbaru agar atomic
       const { data: currentData } = await supabase
         .from('nfc_tags')
         .select('hub_config')
@@ -108,8 +115,7 @@ export function TableHubPortal({ tag, reviewUrl }: TableHubPortalProps) {
       if (!error) {
         setFeedbacksList(updatedFeedbacks);
         setCommentText('');
-        toast.success('Terima kasih! Masukan Anda telah terkirim secara anonim.');
-        setFeedbackModalOpen(false);
+        toast.success('Terima kasih! Masukan Anda berhasil dikirim.');
       } else {
         toast.error(`Gagal mengirim masukan: ${error.message}`);
       }
@@ -117,6 +123,67 @@ export function TableHubPortal({ tag, reviewUrl }: TableHubPortalProps) {
       toast.error('Terjadi kesalahan saat mengirim.');
     } finally {
       setSubmittingFeedback(false);
+    }
+  };
+
+  // Balas komentar dari tamu di portal
+  const handleSendReply = async (feedbackId: string) => {
+    if (!replyText.trim()) {
+      toast.error('Tuliskan balasan Anda terlebih dahulu.');
+      return;
+    }
+
+    setSubmittingReply(true);
+    const updated = feedbacksList.map((fb) => {
+      if (fb.id === feedbackId) {
+        const currentReplies = fb.replies || [];
+        return {
+          ...fb,
+          replies: [
+            ...currentReplies,
+            {
+              id: `rep-${Date.now()}`,
+              sender: 'guest' as const,
+              sender_name: guestName.trim() || 'Tamu',
+              message: replyText.trim(),
+              created_at: new Date().toISOString()
+            }
+          ]
+        };
+      }
+      return fb;
+    });
+
+    try {
+      const { data: currentData } = await supabase
+        .from('nfc_tags')
+        .select('hub_config')
+        .eq('id', tag.id)
+        .single();
+
+      const latestCfg = currentData?.hub_config || cfg;
+      const mergedConfig = {
+        ...latestCfg,
+        feedbacks: updated
+      };
+
+      const { error } = await supabase
+        .from('nfc_tags')
+        .update({ hub_config: mergedConfig, updated_at: new Date().toISOString() })
+        .eq('id', tag.id);
+
+      if (!error) {
+        setFeedbacksList(updated);
+        setReplyText('');
+        setActiveReplyFbId(null);
+        toast.success('Balasan terkirim!');
+      } else {
+        toast.error(`Gagal mengirim balasan: ${error.message}`);
+      }
+    } catch {
+      toast.error('Terjadi kesalahan saat membalas.');
+    } finally {
+      setSubmittingReply(false);
     }
   };
 
@@ -485,35 +552,181 @@ export function TableHubPortal({ tag, reviewUrl }: TableHubPortalProps) {
       {/* Anonymous Feedback Modal Popup */}
       {feedbackModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="relative w-full max-w-sm rounded-[28px] bg-white p-6 shadow-2xl border border-slate-100 flex flex-col animate-in zoom-in-95 duration-200">
+          <div className="relative w-full max-w-md max-h-[85vh] rounded-[28px] bg-white p-5 sm:p-6 shadow-2xl border border-slate-100 flex flex-col animate-in zoom-in-95 duration-200 overflow-hidden">
             {/* Close Button */}
             <button
-              onClick={() => setFeedbackModalOpen(false)}
-              className="absolute top-4 right-4 h-8 w-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 hover:text-slate-900 transition-colors cursor-pointer"
+              onClick={() => {
+                setFeedbackModalOpen(false);
+                setActiveReplyFbId(null);
+                setReplyText('');
+              }}
+              className="absolute top-4 right-4 h-8 w-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 hover:text-slate-900 transition-colors cursor-pointer z-10"
             >
               <X className="h-4 w-4" />
             </button>
 
             {/* Header */}
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-12 h-12 rounded-2xl bg-sky-50 text-sky-600 flex items-center justify-center shadow-inner shrink-0">
-                <MessageSquare className="w-6 h-6" />
+            <div className="flex items-center gap-3 mb-3 shrink-0">
+              <div className="w-11 h-11 rounded-2xl bg-sky-50 text-sky-600 flex items-center justify-center shadow-inner shrink-0">
+                <MessageSquare className="w-5 h-5" />
               </div>
               <div className="text-left">
                 <h3 className="text-base font-bold text-slate-900 leading-tight">
-                  Kritik &amp; Saran Anonim
+                  Kritik, Saran &amp; Obrolan Meja
                 </h3>
                 <p className="text-[11px] text-slate-500 mt-0.5">
-                  Tersimpan khusus untuk meja / tag ini ({tag.id})
+                  Saling balas pesan langsung dengan pemilik restoran ({tag.id})
                 </p>
               </div>
             </div>
 
-            <form onSubmit={handleSubmitFeedback} className="space-y-3.5 mt-2">
-              {/* Rating Bintang */}
-              <div className="flex items-center justify-between bg-slate-50 p-2.5 rounded-xl border border-slate-100">
-                <span className="text-xs font-semibold text-slate-600">Kepuasan Layanan:</span>
-                <div className="flex items-center gap-1">
+            {/* Scrollable Container: Daftar Komentar & Balasan */}
+            <div className="flex-1 overflow-y-auto space-y-3.5 pr-1 my-2 divide-y divide-slate-100">
+              {feedbacksList.length === 0 ? (
+                <div className="py-8 text-center rounded-2xl bg-slate-50/70 border border-dashed border-slate-200 px-4">
+                  <MessageCircle className="w-8 h-8 text-slate-300 mx-auto mb-1.5" />
+                  <p className="text-xs font-bold text-slate-700">Belum ada obrolan di meja ini</p>
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    Jadilah yang pertama menulis masukan atau sapaan untuk resto!
+                  </p>
+                </div>
+              ) : (
+                feedbacksList.map((fb) => (
+                  <div key={fb.id} className="pt-3 first:pt-0 space-y-2">
+                    {/* Pesan Utama Tamu */}
+                    <div className="p-3 rounded-2xl bg-slate-50/80 border border-slate-200/80 text-left space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs font-bold text-slate-800">
+                            {fb.sender_name || 'Tamu Meja'}
+                          </span>
+                          {fb.rating && (
+                            <div className="flex items-center text-amber-400 text-[10px]">
+                              {Array.from({ length: fb.rating }).map((_, i) => (
+                                <Star key={i} className="h-3 w-3 fill-amber-400" />
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        <span className="text-[10px] text-slate-400">
+                          {new Date(fb.created_at).toLocaleDateString('id-ID', {
+                            day: 'numeric',
+                            month: 'short',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-700 leading-relaxed font-normal">
+                        {fb.comment}
+                      </p>
+
+                      {/* Tombol Balas Pesan Ini */}
+                      <div className="flex justify-end pt-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (activeReplyFbId === fb.id) {
+                              setActiveReplyFbId(null);
+                            } else {
+                              setActiveReplyFbId(fb.id);
+                              setReplyText('');
+                            }
+                          }}
+                          className="inline-flex items-center gap-1 text-[11px] font-bold text-sky-600 hover:text-sky-800 cursor-pointer"
+                        >
+                          <CornerDownRight className="w-3 h-3" />
+                          <span>{activeReplyFbId === fb.id ? 'Batal Balas' : 'Balas'}</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Thread Balasan (Admin & Tamu) */}
+                    {fb.replies && fb.replies.length > 0 && (
+                      <div className="pl-4 space-y-1.5 border-l-2 border-slate-200">
+                        {fb.replies.map((rep) => (
+                          <div
+                            key={rep.id}
+                            className={`p-2.5 rounded-xl text-left text-xs ${
+                              rep.sender === 'admin'
+                                ? 'bg-amber-50/80 border border-amber-200/90 text-amber-950'
+                                : 'bg-slate-100 text-slate-800'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="font-bold text-[11px] flex items-center gap-1">
+                                {rep.sender === 'admin' ? (
+                                  <>
+                                    <ShieldCheck className="w-3.5 h-3.5 text-amber-600" />
+                                    <span>{rep.sender_name || 'Admin / Pengelola'}</span>
+                                    <span className="text-[9px] bg-amber-200 text-amber-900 px-1.5 py-0.2 rounded font-bold">Resmi</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <User className="w-3 h-3 text-slate-500" />
+                                    <span>{rep.sender_name || 'Tamu'}</span>
+                                  </>
+                                )}
+                              </span>
+                              <span className="text-[9px] text-slate-400">
+                                {new Date(rep.created_at).toLocaleTimeString('id-ID', {
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })}
+                              </span>
+                            </div>
+                            <p className="leading-snug">{rep.message}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Input Balasan Cepat jika aktif */}
+                    {activeReplyFbId === fb.id && (
+                      <div className="pl-4 pt-1 space-y-2 animate-in fade-in duration-150">
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={replyText}
+                            onChange={(e) => setReplyText(e.target.value)}
+                            placeholder="Tulis balasan Anda..."
+                            className="flex-1 text-xs px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-1 focus:ring-black"
+                            autoFocus
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' && !e.shiftKey) {
+                                e.preventDefault();
+                                handleSendReply(fb.id);
+                              }
+                            }}
+                          />
+                          <button
+                            type="button"
+                            disabled={submittingReply}
+                            onClick={() => handleSendReply(fb.id)}
+                            className="px-3 py-2 bg-black hover:bg-neutral-800 text-white rounded-xl text-xs font-bold transition flex items-center justify-center cursor-pointer shrink-0 disabled:opacity-50"
+                          >
+                            {submittingReply ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Form Buat Masukan / Komentar Baru */}
+            <form onSubmit={handleSubmitFeedback} className="pt-3 border-t border-slate-100 space-y-2.5 shrink-0">
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={guestName}
+                  onChange={(e) => setGuestName(e.target.value)}
+                  placeholder="Nama / Inisial Anda (opsional)"
+                  className="w-1/2 text-xs px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50/50"
+                />
+                {/* Rating Bintang */}
+                <div className="flex-1 flex items-center justify-end gap-1 px-2 py-1 bg-slate-50 rounded-xl border border-slate-100">
                   {[1, 2, 3, 4, 5].map((star) => (
                     <button
                       key={star}
@@ -522,10 +735,8 @@ export function TableHubPortal({ tag, reviewUrl }: TableHubPortalProps) {
                       className="p-0.5 text-slate-300 hover:scale-110 transition-transform cursor-pointer"
                     >
                       <Star
-                        className={`w-5 h-5 ${
-                          star <= rating
-                            ? 'text-amber-400 fill-amber-400'
-                            : 'text-slate-300'
+                        className={`w-3.5 h-3.5 ${
+                          star <= rating ? 'text-amber-400 fill-amber-400' : 'text-slate-300'
                         }`}
                       />
                     </button>
@@ -533,44 +744,30 @@ export function TableHubPortal({ tag, reviewUrl }: TableHubPortalProps) {
                 </div>
               </div>
 
-              {/* Area Komentar */}
-              <div className="space-y-1 text-left">
-                <label className="text-[11px] font-bold text-slate-700">
-                  Pesan / Masukan Anda:
-                </label>
+              <div className="flex gap-2">
                 <textarea
                   required
-                  rows={4}
+                  rows={2}
                   value={commentText}
                   onChange={(e) => setCommentText(e.target.value)}
-                  placeholder="Tuliskan masukan Anda tentang rasa makanan, pelayanan, atau kenyamanan meja secara anonim..."
-                  className="w-full text-xs p-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-black bg-slate-50/50 resize-none"
+                  placeholder="Tulis masukan, kritik, atau pesan untuk meja ini..."
+                  className="flex-1 text-xs p-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-1 focus:ring-black bg-slate-50/50 resize-none"
                 />
+                <button
+                  type="submit"
+                  disabled={submittingFeedback}
+                  className="px-4 bg-black hover:bg-neutral-800 text-white text-xs font-bold rounded-xl transition flex flex-col items-center justify-center gap-1 shadow-xs cursor-pointer disabled:opacity-50 shrink-0"
+                >
+                  {submittingFeedback ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <>
+                      <Send className="w-4 h-4" />
+                      <span className="text-[10px]">Kirim</span>
+                    </>
+                  )}
+                </button>
               </div>
-
-              <div className="flex items-center justify-between text-[10px] text-slate-400 italic">
-                <span>*Identitas Anda 100% terjaga rahasia</span>
-                <span>{tag.id}</span>
-              </div>
-
-              {/* Tombol Kirim */}
-              <button
-                type="submit"
-                disabled={submittingFeedback}
-                className="w-full py-2.5 rounded-xl bg-black hover:bg-neutral-800 text-white text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer disabled:opacity-50"
-              >
-                {submittingFeedback ? (
-                  <>
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    <span>Mengirim...</span>
-                  </>
-                ) : (
-                  <>
-                    <Send className="w-3.5 h-3.5" />
-                    <span>Kirim Masukan Anonim</span>
-                  </>
-                )}
-              </button>
             </form>
           </div>
         </div>
