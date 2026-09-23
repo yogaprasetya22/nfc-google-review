@@ -4,7 +4,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Plus, Trash2, Sparkles, MapPin, Search, Loader2, CheckCircle2, Navigation, FileText, Upload, Link as LinkIcon, FileCheck, ExternalLink } from 'lucide-react';
-import { parseMapsUrl } from '@/lib/utils';
+import { parseMapsUrl, resolveMapsUrlAsync } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 
@@ -61,6 +61,22 @@ export function LinkCardsEditor({
         source: 'url',
         direct_url: parsedUrl.rawUrl
       }]);
+
+      // Jika link pendek, coba unshorten asinkron untuk dapatkan form writereview
+      if ((raw.includes('maps.app.goo.gl') || raw.includes('goo.gl/maps')) && !parsedUrl.rawUrl.includes('writereview')) {
+        void resolveMapsUrlAsync(raw).then((resolved) => {
+          if (resolved?.rawUrl && resolved.rawUrl.includes('writereview')) {
+            setSuggestions([{
+              place_id: `URL:${resolved.rawUrl}`,
+              name: resolved.name || parsedUrl.name,
+              address: 'Form ulasan bintang 5 langsung (Write Review)',
+              category: 'Google Review',
+              source: 'url',
+              direct_url: resolved.rawUrl
+            }]);
+          }
+        });
+      }
       return;
     }
 
@@ -389,7 +405,7 @@ export function LinkCardsEditor({
                           ) : (
                             <Upload className="w-3.5 h-3.5 text-slate-500" />
                           )}
-                          <span>{uploadingPdfIdx === idx ? 'Mengunggah...' : link.url && link.url.includes('.pdf') ? 'Ganti File PDF' : 'Upload File PDF'}</span>
+                          <span className='text-md'>{uploadingPdfIdx === idx ? 'Mengunggah...' : link.url && link.url.includes('.pdf') ? 'Ganti File PDF' : 'Upload File PDF'}</span>
                         </div>
                       </label>
 

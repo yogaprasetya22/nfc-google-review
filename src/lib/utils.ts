@@ -150,7 +150,18 @@ export async function resolveMapsUrlAsync(inputUrl: string): Promise<{ name: str
         const data = await res.json();
         const resolved = data.resolved_url || '';
         if (resolved) {
-          const decodedResolved = decodeURIComponent(resolved);
+          let targetResolved = resolved;
+          try {
+            const resUrlObj = new URL(resolved);
+            const cont = resUrlObj.searchParams.get('continue');
+            if (cont) {
+              targetResolved = cont;
+            }
+          } catch {
+            // Abaikan
+          }
+
+          const decodedResolved = decodeURIComponent(targetResolved);
           const parsed = parseMapsUrl(decodedResolved);
           if (parsed?.rawUrl && parsed.rawUrl.includes('writereview')) {
             return { name: parsed.name, rawUrl: parsed.rawUrl };

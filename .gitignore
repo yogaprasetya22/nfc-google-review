@@ -39,4 +39,4 @@ bun.lockb
 *.sln
 *.sw?
 .gemini/
-
+graphify-out
