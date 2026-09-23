@@ -210,6 +210,20 @@ export function LinkCardsEditor({
           </Button>
           <Button
             type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => onAddLink({
+              title: 'Play UNO No Mercy',
+              icon: 'game',
+              url: 'https://unonomercy.in/',
+              highlight: false
+            })}
+            className="text-[10px] h-7 px-2.5 rounded-lg border-amber-200 text-amber-700 bg-amber-50/50 hover:bg-amber-100"
+          >
+            + Game (UNO)
+          </Button>
+          <Button
+            type="button"
             size="sm"
             onClick={() => onAddLink()}
             className="text-[10px] h-7 px-2.5 rounded-lg bg-black text-white font-bold"

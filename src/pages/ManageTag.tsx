@@ -132,7 +132,7 @@ export default function ManageTag() {
         { id: '2', title: 'View Menu', url: cfg.menu_url || 'https://menu.online', icon: 'menu', highlight: false },
         { id: '3', title: 'Connect to Wi-Fi', url: '#wifi', icon: 'wifi', highlight: false },
         { id: '4', title: 'Leave Anonymous Feedback', url: '#feedback', icon: 'feedback', highlight: false },
-        { id: '5', title: 'Play Sudoku', url: 'https://sudoku.com', icon: 'game', highlight: false }
+        { id: '5', title: 'Play UNO No Mercy', url: 'https://unonomercy.in/', icon: 'game', highlight: false }
       ]);
 
     }

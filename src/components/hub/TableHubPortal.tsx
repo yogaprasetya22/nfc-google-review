@@ -66,7 +66,7 @@ export function TableHubPortal({ tag, reviewUrl }: TableHubPortalProps) {
       { id: '2', title: 'View Menu', url: cfg.menu_url || '#menu', icon: 'menu' as const },
       { id: '3', title: 'Connect to Wi-Fi', url: '#wifi', icon: 'wifi' as const },
       { id: '4', title: 'Leave Anonymous Feedback', url: '#feedback', icon: 'feedback' as const },
-      { id: '5', title: 'Play Sudoku', url: 'https://sudoku.com', icon: 'game' as const }
+      { id: '5', title: 'Play UNO No Mercy', url: 'https://unonomercy.in/', icon: 'game' as const }
     ]).filter((link) => link.enabled !== false);
 
 
