@@ -119,12 +119,11 @@ export default function ManageTag() {
         : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(current.business_name || '')}`;
 
       setCustomLinks([
-        { id: '1', title: 'Start earning rewards', url: '#rewards', icon: 'rewards', highlight: false },
-        { id: '2', title: 'Leave a Google Review', url: reviewUrl, icon: 'google', highlight: true },
-        { id: '3', title: 'View Menu', url: cfg.menu_url || 'https://menu.online', icon: 'menu', highlight: false },
-        { id: '4', title: 'Connect to Wi-Fi', url: '#wifi', icon: 'wifi', highlight: false },
-        { id: '5', title: 'Leave Anonymous Feedback', url: '#feedback', icon: 'feedback', highlight: false },
-        { id: '6', title: 'Play Sudoku', url: 'https://sudoku.com', icon: 'game', highlight: false }
+        { id: '1', title: 'Leave a Google Review', url: reviewUrl, icon: 'google', highlight: true },
+        { id: '2', title: 'View Menu', url: cfg.menu_url || 'https://menu.online', icon: 'menu', highlight: false },
+        { id: '3', title: 'Connect to Wi-Fi', url: '#wifi', icon: 'wifi', highlight: false },
+        { id: '4', title: 'Leave Anonymous Feedback', url: '#feedback', icon: 'feedback', highlight: false },
+        { id: '5', title: 'Play Sudoku', url: 'https://sudoku.com', icon: 'game', highlight: false }
       ]);
 
     }

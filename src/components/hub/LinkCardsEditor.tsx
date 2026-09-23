@@ -185,20 +185,6 @@ export function LinkCardsEditor({
             variant="outline"
             size="sm"
             onClick={() => onAddLink({
-              title: 'Start earning rewards',
-              icon: 'rewards',
-              url: 'https://',
-              highlight: false
-            })}
-            className="text-[10px] h-7 px-2.5 rounded-lg border-rose-200 text-rose-600 bg-rose-50/50 hover:bg-rose-100"
-          >
-            + Rewards
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => onAddLink({
               title: 'Leave a Google Review',
               icon: 'google',
               url: 'https://search.google.com/local/writereview',

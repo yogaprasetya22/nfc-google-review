@@ -27,12 +27,11 @@ export function TableHubPortal({ tag, reviewUrl }: TableHubPortalProps) {
   const linksToRender = (cfg.custom_links && cfg.custom_links.length > 0
     ? cfg.custom_links
     : [
-        { id: '1', title: 'Start earning rewards', url: '#rewards', icon: 'rewards' as const },
-        { id: '2', title: 'Leave a Google Review', url: reviewUrl, icon: 'google' as const, highlight: true },
-        { id: '3', title: 'View Menu', url: cfg.menu_url || '#menu', icon: 'menu' as const },
-        { id: '4', title: 'Connect to Wi-Fi', url: '#wifi', icon: 'wifi' as const },
-        { id: '5', title: 'Leave Anonymous Feedback', url: '#feedback', icon: 'feedback' as const },
-        { id: '6', title: 'Play Sudoku', url: 'https://sudoku.com', icon: 'game' as const }
+        { id: '1', title: 'Leave a Google Review', url: reviewUrl, icon: 'google' as const, highlight: true },
+        { id: '2', title: 'View Menu', url: cfg.menu_url || '#menu', icon: 'menu' as const },
+        { id: '3', title: 'Connect to Wi-Fi', url: '#wifi', icon: 'wifi' as const },
+        { id: '4', title: 'Leave Anonymous Feedback', url: '#feedback', icon: 'feedback' as const },
+        { id: '5', title: 'Play Sudoku', url: 'https://sudoku.com', icon: 'game' as const }
       ]).filter((link) => link.enabled !== false);
 
 
@@ -364,12 +363,19 @@ export function TableHubPortal({ tag, reviewUrl }: TableHubPortalProps) {
               )}
 
               {/* Bottom Owner Config and Info */}
-              <footer className="mt-8 pt-4 border-t border-slate-100 flex flex-col items-center justify-center gap-3">
+              <footer className="mt-8 pt-4 border-t border-slate-100 flex flex-col items-center justify-center gap-2.5">
                 <div className="flex items-center gap-3 text-[11px] text-slate-400 font-medium">
                   <span className="text-slate-800 font-semibold">ID</span>
                   <span>•</span>
                   <span>{tag.id}</span>
                 </div>
+                <Link
+                  to={`/manage/${tag.id}`}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 text-[11px] font-semibold transition-colors"
+                >
+                  <Settings2 className="w-3.5 h-3.5 text-slate-500" />
+                  <span>Kelola Stand Meja Ini</span>
+                </Link>
               </footer>
             </div>
           </section>
