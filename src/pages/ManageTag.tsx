@@ -36,6 +36,7 @@ import { LinkCardsEditor } from '@/components/hub/LinkCardsEditor';
 import { MobilePreview } from '@/components/hub/MobilePreview';
 import type { FeedbackItem } from '@/types/nfc';
 import { compressImageToKB } from '@/lib/imageCompressor';
+import { parseMapsUrl } from '@/lib/utils';
 
 export default function ManageTag() {
   const { tagId } = useParams<{ tagId: string }>();
@@ -245,7 +246,17 @@ export default function ManageTag() {
 
   function handleLinkChange(index: number, field: keyof CustomLink, value: any) {
     const updated = [...customLinks];
-    updated[index] = { ...updated[index], [field]: value };
+    let finalValue = value;
+
+    // ponytail: auto-convert setiap input link google maps menjadi direct writereview
+    if (field === 'url' && typeof value === 'string' && value.trim()) {
+      const parsed = parseMapsUrl(value);
+      if (parsed?.rawUrl && parsed.rawUrl.includes('writereview')) {
+        finalValue = parsed.rawUrl;
+      }
+    }
+
+    updated[index] = { ...updated[index], [field]: finalValue };
     setCustomLinks(updated);
   }
 

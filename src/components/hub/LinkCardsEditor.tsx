@@ -559,8 +559,18 @@ export function LinkCardsEditor({
 
                   <Input
                     value={link.url}
-                    onChange={(e) => onLinkChange(idx, 'url', e.target.value)}
-                    placeholder="https://..."
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      // ponytail: auto-convert jika paste link google maps langsung ke input manual
+                      const parsed = parseMapsUrl(val);
+                      if (parsed?.rawUrl && parsed.rawUrl.includes('writereview')) {
+                        onLinkChange(idx, 'url', parsed.rawUrl);
+                        toast.success('Otomatis diubah menjadi link langsung ke form ulasan bintang!');
+                      } else {
+                        onLinkChange(idx, 'url', val);
+                      }
+                    }}
+                    placeholder="https://... atau paste link Google Maps"
                     className="h-8 text-xs bg-white rounded-lg border-slate-200 font-mono"
                   />
                 </>
