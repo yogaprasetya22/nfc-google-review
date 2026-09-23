@@ -297,12 +297,12 @@ export function LinkCardsEditor({
         {customLinks.map((link, idx) => (
           <div
             key={link.id || idx}
-            className="p-4 rounded-2xl border border-slate-200/90 bg-slate-50/50 flex flex-col gap-3 transition-all hover:border-slate-300 relative"
+            className="p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-slate-200/90 bg-slate-50/50 flex flex-col gap-2.5 sm:gap-3 transition-all hover:border-slate-300 relative"
           >
             {/* Header Item: Nomor Urut, Judul, Toggle Aktif/Nonaktif & Hapus */}
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2 flex-1">
-                <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${
+            <div className="flex items-center justify-between gap-2 sm:gap-3">
+              <div className="flex items-center gap-1.5 sm:gap-2 flex-1 min-w-0">
+                <span className={`w-4 h-4 sm:w-5 sm:h-5 rounded-full flex items-center justify-center text-[9px] sm:text-[10px] font-bold shrink-0 ${
                   link.enabled !== false ? 'bg-slate-900 text-white' : 'bg-slate-200 text-slate-500'
                 }`}>
                   {idx + 1}
@@ -310,17 +310,17 @@ export function LinkCardsEditor({
                 <Input
                   value={link.title}
                   onChange={(e) => onLinkChange(idx, 'title', e.target.value)}
-                  placeholder="Judul Tombol (Contoh: Leave a Google Review)"
-                  className="h-8 text-xs font-bold bg-white rounded-lg border-slate-200"
+                  placeholder="Judul Tombol"
+                  className="h-7 sm:h-8 text-[11px] sm:text-xs font-bold bg-white rounded-lg border-slate-200"
                 />
               </div>
 
               {/* Toggle Aktif / Nonaktif Switch Button */}
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                 <button
                   type="button"
                   onClick={() => onLinkChange(idx, 'enabled', link.enabled === false ? true : false)}
-                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold transition-all cursor-pointer ${
+                  className={`inline-flex items-center gap-1 sm:gap-1.5 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[9px] sm:text-[10px] font-bold transition-all cursor-pointer ${
                     link.enabled !== false
                       ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200 border border-emerald-300'
                       : 'bg-slate-200 text-slate-600 hover:bg-slate-300 border border-slate-300'
@@ -336,10 +336,10 @@ export function LinkCardsEditor({
                   variant="ghost"
                   size="sm"
                   onClick={() => onRemoveLink(link.id)}
-                  className="h-8 w-8 p-0 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg shrink-0 cursor-pointer"
+                  className="h-7 w-7 sm:h-8 sm:w-8 p-0 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg shrink-0 cursor-pointer"
                   title="Hapus tombol"
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <Trash2 className="h-3.5 w-3.5" />
                 </Button>
               </div>
             </div>
@@ -382,9 +382,9 @@ export function LinkCardsEditor({
                     <span className="text-[9px] text-slate-400">Pilih Upload PDF atau Link Website</span>
                   </div>
 
-                  <div className="p-3 bg-white rounded-xl border border-slate-200/90 space-y-2.5">
+                  <div className="p-2.5 sm:p-3 bg-white rounded-xl border border-slate-200/90 space-y-2">
                     {/* Mode Selector */}
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5 sm:gap-2">
                       <label className="flex-1 cursor-pointer">
                         <input
                           type="file"
@@ -393,48 +393,48 @@ export function LinkCardsEditor({
                           disabled={uploadingPdfIdx === idx}
                           onChange={(e) => handlePdfUpload(e, idx)}
                         />
-                        <div className={`flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg border text-xs font-bold transition-all ${
+                        <div className={`flex items-center justify-center gap-1 sm:gap-1.5 py-1.5 px-2 rounded-lg border text-[11px] sm:text-xs font-bold transition-all ${
                           link.url && link.url.includes('.pdf')
                             ? 'bg-amber-50 border-amber-300 text-amber-900 shadow-xs'
                             : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700'
                         }`}>
                           {uploadingPdfIdx === idx ? (
-                            <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-600" />
+                            <Loader2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 animate-spin text-amber-600" />
                           ) : link.url && link.url.includes('.pdf') ? (
-                            <FileCheck className="w-3.5 h-3.5 text-amber-600" />
+                            <FileCheck className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-600" />
                           ) : (
-                            <Upload className="w-3.5 h-3.5 text-slate-500" />
+                            <Upload className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-slate-500" />
                           )}
-                          <span className='text-md'>{uploadingPdfIdx === idx ? 'Mengunggah...' : link.url && link.url.includes('.pdf') ? 'Ganti File PDF' : 'Upload File PDF'}</span>
+                          <span className="text-[11px] sm:text-xs">{uploadingPdfIdx === idx ? 'Mengunggah...' : link.url && link.url.includes('.pdf') ? 'Ganti File PDF' : 'Upload File PDF'}</span>
                         </div>
                       </label>
 
-                      <div className="text-[10px] font-bold text-slate-400 uppercase">atau</div>
+                      <div className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase">atau</div>
 
                       <div className="flex-1">
-                        <div className={`flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg border text-xs font-bold ${
+                        <div className={`flex items-center justify-center gap-1 sm:gap-1.5 py-1.5 px-2 rounded-lg border text-[11px] sm:text-xs font-bold ${
                           !link.url || !link.url.includes('.pdf')
                             ? 'bg-blue-50 border-blue-200 text-blue-900'
                             : 'bg-slate-50 border-slate-200 text-slate-500'
                         }`}>
-                          <LinkIcon className="w-3.5 h-3.5" />
-                          <span>Link Web / Drive</span>
+                          <LinkIcon className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                          <span className="text-[11px] sm:text-xs">Link Web / Drive</span>
                         </div>
                       </div>
                     </div>
 
                     {/* Status Info jika PDF aktif */}
                     {link.url && link.url.includes('.pdf') && (
-                      <div className="flex items-center justify-between p-2 rounded-lg bg-amber-50/70 border border-amber-200/80 text-[11px] text-amber-900">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <FileText className="w-4 h-4 text-amber-700 shrink-0" />
+                      <div className="flex items-center justify-between p-2 rounded-lg bg-amber-50/70 border border-amber-200/80 text-[10px] sm:text-[11px] text-amber-900">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <FileText className="w-3.5 h-3.5 text-amber-700 shrink-0" />
                           <span className="font-medium truncate">Dokumen PDF Menu Aktif</span>
                         </div>
                         <a
                           href={link.url}
                           target="_blank"
                           rel="noreferrer"
-                          className="text-[10px] font-bold text-amber-700 hover:text-amber-900 underline shrink-0"
+                          className="text-[10px] font-bold text-amber-700 hover:text-amber-900 underline shrink-0 ml-1"
                         >
                           Lihat PDF
                         </a>
@@ -444,7 +444,7 @@ export function LinkCardsEditor({
                     {/* Input URL link */}
                     <div className="space-y-1">
                       <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-medium text-slate-500">
+                        <span className="text-[9px] sm:text-[10px] font-medium text-slate-500">
                           {link.url && link.url.includes('.pdf') ? 'URL Berkas PDF Terunggah:' : 'Tautan / Link Website Menu (Drive, Website, GoFood dll):'}
                         </span>
                       </div>
@@ -452,7 +452,7 @@ export function LinkCardsEditor({
                         value={link.url}
                         onChange={(e) => onLinkChange(idx, 'url', e.target.value)}
                         placeholder="https://menu.online atau upload PDF..."
-                        className="h-8 text-xs bg-slate-50/50 rounded-lg border-slate-200 font-mono"
+                        className="h-7 sm:h-8 text-[11px] sm:text-xs bg-slate-50/50 rounded-lg border-slate-200 font-mono"
                       />
                     </div>
                   </div>

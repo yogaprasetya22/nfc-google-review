@@ -380,52 +380,52 @@ export function TableHubPortal({ tag, reviewUrl }: TableHubPortalProps) {
                     target={link.url === '#wifi' ? undefined : '_blank'}
                     rel="noreferrer"
                     onClick={(e) => handleLinkClick(link, e)}
-                    className={`group block relative rounded-2xl p-4 transition-all duration-200 active:scale-[0.99] cursor-pointer ${link.highlight
+                    className={`group block relative rounded-2xl p-3 sm:p-4 transition-all duration-200 active:scale-[0.99] cursor-pointer ${link.highlight
                         ? 'bg-neutral-900 hover:bg-black text-white border border-slate-800 shadow-md'
                         : 'bg-white hover:bg-slate-50/80 border border-slate-200/90 text-slate-800 shadow-xs hover:shadow-sm'
                       }`}
                   >
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3.5 min-w-0">
+                      <div className="flex items-center gap-3 min-w-0">
                         <LinkIconBadge icon={link.icon} />
                         <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className={`text-sm font-bold truncate ${link.highlight ? 'text-white' : 'text-slate-900'}`}>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className={`text-xs sm:text-sm font-bold truncate ${link.highlight ? 'text-white' : 'text-slate-900'}`}>
                               {link.title}
                             </span>
                             {link.icon === 'rewards' && (
-                              <span className="text-[10px] font-bold bg-rose-100 text-rose-700 px-1.5 py-0.5 rounded-full uppercase">
+                              <span className="text-[9px] font-bold bg-rose-100 text-rose-700 px-1.5 py-0.5 rounded-full uppercase">
                                 Perk
                               </span>
                             )}
                             {link.icon === 'google' && (
-                              <span className="text-amber-400 text-xs font-bold">★★★★★</span>
+                              <span className="text-amber-400 text-[10px] sm:text-xs font-bold tracking-tight">★★★★★</span>
                             )}
                           </div>
                           {link.icon === 'rewards' && (
-                            <p className="text-xs text-slate-500 mt-0.5 font-medium truncate">
+                            <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5 font-medium truncate">
                               Kumpulkan poin untuk reward menu
                             </p>
                           )}
                           {link.icon === 'google' && (
-                            <p className="text-xs text-slate-300 mt-0.5 font-normal truncate">
+                            <p className="text-[11px] sm:text-xs text-slate-300 mt-0.5 font-normal truncate">
                               Bantu dengan ulasan & foto momen Anda
                             </p>
                           )}
                           {link.icon === 'wifi' && (
-                            <p className="text-xs text-slate-500 mt-0.5 font-medium truncate">
+                            <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5 font-medium truncate">
                               {cfg.wifi_ssid ? `${cfg.wifi_ssid} • Tap untuk salin` : 'Tap untuk salin password'}
                             </p>
                           )}
                           {link.icon === 'menu' && (
-                            <p className="text-xs text-slate-500 mt-0.5 font-medium truncate">
+                            <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5 font-medium truncate">
                               {link.url && link.url.includes('.pdf') ? 'Dokumen PDF • Buka Buku Menu' : 'Daftar menu & harga'}
                             </p>
                           )}
                         </div>
                       </div>
-                      <div className={`transition-colors shrink-0 ${link.highlight ? 'text-slate-400 group-hover:text-white' : 'text-slate-400 group-hover:text-slate-700'}`}>
-                        <ExternalLink className="w-5 h-5" />
+                      <div className={`transition-colors shrink-0 ml-2 ${link.highlight ? 'text-slate-400 group-hover:text-white' : 'text-slate-400 group-hover:text-slate-700'}`}>
+                        <ExternalLink className="w-4 h-4 sm:w-5 sm:h-5" />
                       </div>
                     </div>
                   </a>

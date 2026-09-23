@@ -437,69 +437,70 @@ export default function ManageTag() {
 
   // Dashboard CMS Table Hub
   return (
-    <div className="min-h-screen bg-slate-100/70 p-3 md:p-8 flex justify-center selection:bg-black selection:text-white">
-      <div className="w-full max-w-7xl space-y-6">
+    <div className="min-h-screen bg-slate-100/70 p-2.5 sm:p-4 md:p-8 flex justify-center selection:bg-black selection:text-white">
+      <div className="w-full max-w-7xl space-y-4 sm:space-y-6">
         {/* Top Header Bar */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-3xl border border-slate-200/80 shadow-xs">
-          <div className="flex items-center gap-3.5">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-black text-white font-black text-lg shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 bg-white p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl border border-slate-200/80 shadow-xs">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-xl sm:rounded-2xl bg-black text-white font-black text-sm sm:text-lg shadow-sm shrink-0">
               {businessName.substring(0, 2).toUpperCase() || 'TH'}
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-mono text-[10px] px-2 py-0.5 rounded-md bg-slate-100 font-bold text-slate-800">
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="font-mono text-[9px] sm:text-[10px] px-1.5 py-0.5 rounded-md bg-slate-100 font-bold text-slate-800">
                   {tagId}
                 </span>
-                <h1 className="text-lg font-bold text-slate-900">{businessName || 'Table Hub'}</h1>
+                <h1 className="text-base sm:text-lg font-bold text-slate-900 truncate">{businessName || 'Table Hub'}</h1>
               </div>
-              <p className="text-xs text-slate-500 mt-0.5">Editor Bio Link & Tautan Interaktif Meja Tamu</p>
+              <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5 truncate">Editor Bio Link & Tautan Interaktif Meja</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 w-full sm:w-auto">
             <a
               href={`/t/${tagId}`}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-800 text-xs font-semibold shadow-xs transition-all"
+              className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-800 text-[11px] sm:text-xs font-semibold shadow-xs transition-all"
             >
-              Buka Bio Link <ExternalLink className="h-3.5 w-3.5" />
+              <span>Buka Bio Link</span>
+              <ExternalLink className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
             </a>
             <Button
               onClick={handleUpdate}
               disabled={submitting}
-              className="bg-black hover:bg-neutral-800 text-white text-xs font-bold px-5 h-9 rounded-xl shadow-xs"
+              className="flex-1 sm:flex-initial bg-black hover:bg-neutral-800 text-white text-[11px] sm:text-xs font-bold px-3.5 sm:px-5 h-8 sm:h-9 rounded-xl shadow-xs"
             >
               {submitting ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <Save className="h-3.5 w-3.5 mr-1.5" />}
-              Simpan Perubahan
+              <span>Simpan</span>
             </Button>
           </div>
         </div>
 
         {/* Mobile Tab Switcher (Hanya tampil di layar HP < lg) */}
-        <div className="flex lg:hidden bg-white p-1 rounded-2xl border border-slate-200 shadow-xs">
+        <div className="flex lg:hidden bg-white p-1 rounded-xl sm:rounded-2xl border border-slate-200 shadow-xs">
           <button
             type="button"
             onClick={() => setMobileTab('editor')}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-bold transition-all cursor-pointer ${
               mobileTab === 'editor'
                 ? 'bg-black text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            <Edit3 className="h-4 w-4" />
+            <Edit3 className="h-3.5 w-3.5" />
             <span>Form Editor CMS</span>
           </button>
           <button
             type="button"
             onClick={() => setMobileTab('preview')}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-bold transition-all cursor-pointer ${
               mobileTab === 'preview'
                 ? 'bg-black text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            <Eye className="h-4 w-4" />
+            <Eye className="h-3.5 w-3.5" />
             <span>Live Preview HP</span>
           </button>
         </div>
@@ -507,46 +508,46 @@ export default function ManageTag() {
         {/* 2-Column Layout (Desktop) / Tab Switchable (Mobile) */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start w-full">
           {/* Left Column: Form Editor */}
-          <div className={`lg:col-span-7 space-y-6 ${mobileTab === 'preview' ? 'hidden lg:block' : 'block'}`}>
+          <div className={`lg:col-span-7 space-y-4 sm:space-y-6 ${mobileTab === 'preview' ? 'hidden lg:block' : 'block'}`}>
             {/* Mode Operasional */}
-            <Card className="border-slate-200/80 bg-white shadow-xs rounded-3xl">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-bold text-slate-900">Mode Operasional Unit</CardTitle>
-                <CardDescription className="text-xs text-slate-500">
+            <Card className="border-slate-200/80 bg-white shadow-xs rounded-2xl sm:rounded-3xl">
+              <CardHeader className="p-4 sm:p-6 pb-2 sm:pb-3">
+                <CardTitle className="text-xs sm:text-sm font-bold text-slate-900">Mode Operasional Unit</CardTitle>
+                <CardDescription className="text-[11px] sm:text-xs text-slate-500">
                   Tentukan bagaimana unit NFC merespons saat disentuh oleh smartphone pengunjung.
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 gap-3">
+              <CardContent className="p-4 sm:p-6 pt-0">
+                <div className="grid grid-cols-2 gap-2 sm:gap-3">
                   <button
                     type="button"
                     onClick={() => setProductType('DIRECT_REVIEW')}
-                    className={`flex items-center gap-3 p-3.5 rounded-2xl border text-left transition-all cursor-pointer ${
+                    className={`flex items-center gap-2 sm:gap-3 p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl border text-left transition-all cursor-pointer ${
                       productType === 'DIRECT_REVIEW'
                         ? 'border-black bg-black text-white shadow-xs'
                         : 'border-slate-200 bg-slate-50/50 text-slate-600 hover:bg-slate-100'
                     }`}
                   >
-                    <Star className="h-5 w-5 shrink-0" />
+                    <Star className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" />
                     <div>
-                      <div className="text-xs font-bold">Direct Review</div>
-                      <div className="text-[10px] opacity-80">Lompat instan ke Google Maps</div>
+                      <div className="text-[11px] sm:text-xs font-bold">Direct Review</div>
+                      <div className="text-[9px] sm:text-[10px] opacity-80 leading-tight">Lompat instan ke Maps</div>
                     </div>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setProductType('TABLE_HUB')}
-                    className={`flex items-center gap-3 p-3.5 rounded-2xl border text-left transition-all cursor-pointer ${
+                    className={`flex items-center gap-2 sm:gap-3 p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl border text-left transition-all cursor-pointer ${
                       productType === 'TABLE_HUB'
                         ? 'border-black bg-black text-white shadow-xs'
                         : 'border-slate-200 bg-slate-50/50 text-slate-600 hover:bg-slate-100'
                     }`}
                   >
-                    <Utensils className="h-5 w-5 shrink-0" />
+                    <Utensils className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" />
                     <div>
-                      <div className="text-xs font-bold">Table Hub (Linktree)</div>
-                      <div className="text-[10px] opacity-80">Menu, Ulasan, Wi-Fi & Hadiah</div>
+                      <div className="text-[11px] sm:text-xs font-bold">Table Hub (Linktree)</div>
+                      <div className="text-[9px] sm:text-[10px] opacity-80 leading-tight">Menu, Ulasan, Wi-Fi</div>
                     </div>
                   </button>
                 </div>
@@ -655,46 +656,46 @@ export default function ManageTag() {
               /* Jika mode TABLE_HUB aktif: Form lengkap Table Hub */
               <>
             {/* Profil Brand */}
-            <Card className="border-slate-200/80 bg-white shadow-xs rounded-3xl">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-bold text-slate-900">Profil Bisnis & Tampilan Atas</CardTitle>
-                <CardDescription className="text-xs text-slate-500">
+            <Card className="border-slate-200/80 bg-white shadow-xs rounded-2xl sm:rounded-3xl">
+              <CardHeader className="p-4 sm:p-6 pb-2 sm:pb-3">
+                <CardTitle className="text-xs sm:text-sm font-bold text-slate-900">Profil Bisnis & Tampilan Atas</CardTitle>
+                <CardDescription className="text-[11px] sm:text-xs text-slate-500">
                   Logo toko, foto banner/meja, dan kalimat slogan penyambut.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="p-4 sm:p-6 pt-0 space-y-3 sm:space-y-4">
                 {/* Nama Bisnis / Resto */}
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                  <label className="text-[11px] sm:text-xs font-semibold text-slate-700 flex items-center gap-1.5">
                     <Store className="h-3.5 w-3.5 text-slate-500" /> Nama Bisnis / Restoran / Kafe
                   </label>
                   <Input
                     value={businessName}
                     onChange={(e) => setBusinessName(e.target.value)}
                     placeholder="Contoh: Kopi Kenangan, Barlow & Fields, Resto Sedap"
-                    className="h-10 text-xs font-bold rounded-xl border-slate-200 bg-white"
+                    className="h-8 sm:h-10 text-xs font-bold rounded-xl border-slate-200 bg-white"
                     required
                   />
-                  <span className="text-[10px] text-slate-400 block">
+                  <span className="text-[9px] sm:text-[10px] text-slate-400 block">
                     Nama ini tampil sebagai identitas utama di portal meja tamu dan dashboard.
                   </span>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-4">
                   {/* Foto Profil / Logo Toko */}
-                  <div className="space-y-2 p-3 rounded-2xl border border-slate-200/80 bg-slate-50/50">
+                  <div className="space-y-1.5 sm:space-y-2 p-2.5 sm:p-3 rounded-xl sm:rounded-2xl border border-slate-200/80 bg-slate-50/50">
                     <div className="flex items-center justify-between">
-                      <label className="text-xs font-bold text-slate-800">Foto Profil / Logo Toko</label>
-                      <label className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-black hover:bg-neutral-800 text-white text-[11px] font-bold cursor-pointer transition-all shadow-xs">
+                      <label className="text-[11px] sm:text-xs font-bold text-slate-800">Foto Profil / Logo Toko</label>
+                      <label className="inline-flex items-center gap-1 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg sm:rounded-xl bg-black hover:bg-neutral-800 text-white text-[10px] sm:text-[11px] font-bold cursor-pointer transition-all shadow-xs">
                         {uploadingAvatar ? (
                           <>
                             <Loader2 className="h-3 w-3 animate-spin" />
-                            <span>Kompres &amp; Upload...</span>
+                            <span>Unggah...</span>
                           </>
                         ) : (
                           <>
                             <Upload className="h-3 w-3" />
-                            <span>Upload &amp; Kompres</span>
+                            <span>Upload</span>
                           </>
                         )}
                         <input
@@ -707,26 +708,26 @@ export default function ManageTag() {
                       </label>
                     </div>
 
-                    <div className="flex items-center gap-2.5">
+                    <div className="flex items-center gap-2 sm:gap-2.5">
                       {avatarUrl ? (
                         <img
                           src={avatarUrl}
                           alt="Avatar preview"
-                          className="w-10 h-10 rounded-xl object-cover border border-slate-200 shadow-xs shrink-0"
+                          className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl object-cover border border-slate-200 shadow-xs shrink-0"
                         />
                       ) : (
-                        <div className="w-10 h-10 rounded-xl bg-slate-200 flex items-center justify-center text-slate-400 shrink-0">
-                          <ImageIcon className="w-5 h-5" />
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-slate-200 flex items-center justify-center text-slate-400 shrink-0">
+                          <ImageIcon className="w-4 h-4 sm:w-5 sm:h-5" />
                         </div>
                       )}
                       <Input
                         value={avatarUrl}
                         onChange={(e) => setAvatarUrl(e.target.value)}
                         placeholder="https://... atau klik Upload"
-                        className="h-9 text-xs rounded-xl border-slate-200 bg-white"
+                        className="h-8 sm:h-9 text-[11px] sm:text-xs rounded-lg sm:rounded-xl border-slate-200 bg-white"
                       />
                     </div>
-                    <span className="text-[10px] text-slate-400 block">
+                    <span className="text-[9px] text-slate-400 block">
                       *Otomatis dikompres ke format WebP ringan (KB)
                     </span>
                   </div>
