@@ -28,7 +28,9 @@ import {
   CornerDownRight,
   Send,
   ShieldCheck,
-  User
+  User,
+  MapPin,
+  Sparkles
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -60,6 +62,7 @@ export default function ManageTag() {
   // Form Fields
   const [productType, setProductType] = useState<ProductType>('TABLE_HUB');
   const [businessName, setBusinessName] = useState('');
+  const [directReviewUrl, setDirectReviewUrl] = useState('');
   const [tagline, setTagline] = useState('');
   const [bio, setBio] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
@@ -107,6 +110,12 @@ export default function ManageTag() {
     const current = data as NfcTagEntity;
     setProductType(current.type || 'TABLE_HUB');
     setBusinessName(current.business_name || '');
+
+    // Inisialisasi link review langsung
+    const initialDirectUrl = current.google_place_id
+      ? (current.google_place_id.startsWith('URL:') ? current.google_place_id.replace('URL:', '') : `https://search.google.com/local/writereview?placeid=${current.google_place_id}`)
+      : (current.hub_config?.custom_links?.find(l => l.icon === 'google')?.url || '');
+    setDirectReviewUrl(initialDirectUrl);
     
     const cfg = current.hub_config || {};
     setTagline(cfg.tagline || 'Great choice, awkward chat');
@@ -124,9 +133,7 @@ export default function ManageTag() {
     if (cfg.custom_links && cfg.custom_links.length > 0) {
       setCustomLinks(cfg.custom_links);
     } else {
-      const reviewUrl = current.google_place_id 
-        ? (current.google_place_id.startsWith('URL:') ? current.google_place_id.replace('URL:', '') : `https://search.google.com/local/writereview?placeid=${current.google_place_id}`)
-        : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(current.business_name || '')}`;
+      const reviewUrl = initialDirectUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(current.business_name || '')}`;
 
       setCustomLinks([
         { id: '1', title: 'Leave a Google Review', url: reviewUrl, icon: 'google', highlight: true },
@@ -312,8 +319,20 @@ export default function ManageTag() {
 
 
   async function handleUpdate(e: React.FormEvent) {
-    e.preventDefault();
-    if (!tagId) return;
+    // Pastikan link review tersimpan dengan benar
+    let effectivePlaceId: string | null = null;
+    let updatedCustomLinks = [...customLinks];
+
+    if (productType === 'DIRECT_REVIEW') {
+      const parsed = parseMapsUrl(directReviewUrl);
+      effectivePlaceId = parsed?.rawUrl ? (parsed.rawUrl.startsWith('http') ? `URL:${parsed.rawUrl}` : parsed.rawUrl) : (directReviewUrl ? `URL:${directReviewUrl}` : null);
+      
+      // Update juga di custom_links kartu review jika ada
+      const reviewIdx = updatedCustomLinks.findIndex(l => l.icon === 'google');
+      if (reviewIdx !== -1 && directReviewUrl) {
+        updatedCustomLinks[reviewIdx] = { ...updatedCustomLinks[reviewIdx], url: parsed?.rawUrl || directReviewUrl };
+      }
+    }
 
     setSubmitting(true);
     const { data: success, error } = await supabase.rpc('update_tag_config', {
@@ -332,10 +351,15 @@ export default function ManageTag() {
         youtube,
         tiktok,
         whatsapp,
-        custom_links: customLinks,
+        custom_links: updatedCustomLinks,
         feedbacks
       }
     });
+
+    // Jika mode DIRECT_REVIEW, update google_place_id di tabel nfc_tags
+    if (effectivePlaceId) {
+      await supabase.from('nfc_tags').update({ google_place_id: effectivePlaceId }).eq('id', tagId);
+    }
 
     setSubmitting(false);
 
@@ -519,6 +543,95 @@ export default function ManageTag() {
               </CardContent>
             </Card>
 
+            {/* Jika mode DIRECT_REVIEW aktif: Form simpel khusus Google Maps Review */}
+            {productType === 'DIRECT_REVIEW' ? (
+              <Card className="border-slate-200/80 bg-white shadow-xs rounded-3xl">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="p-2 rounded-xl bg-amber-50 text-amber-600 border border-amber-200">
+                      <Star className="h-5 w-5 fill-amber-400 text-amber-500" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-sm font-bold text-slate-900">Target Google Review (Direct)</CardTitle>
+                      <CardDescription className="text-xs text-slate-500">
+                        Ketika pelanggan tap unit NFC, smartphone langsung membuka form ulasan bintang.
+                      </CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Nama Bisnis */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                      <Store className="h-3.5 w-3.5 text-slate-500" /> Nama Bisnis / Tempat
+                    </label>
+                    <Input
+                      value={businessName}
+                      onChange={(e) => setBusinessName(e.target.value)}
+                      placeholder="Contoh: Kopi Kenangan - Sahid Sudirman"
+                      className="h-10 text-xs font-bold rounded-xl border-slate-200 bg-white"
+                      required
+                    />
+                  </div>
+
+                  {/* Input Link Google Maps */}
+                  <div className="space-y-2 p-4 rounded-2xl bg-blue-50/60 border border-blue-200/80">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-blue-950 flex items-center gap-1.5">
+                        <MapPin className="h-4 w-4 text-blue-600" /> Tautan / URL Google Maps
+                      </label>
+                      <span className="text-[10px] text-blue-600 font-mono">Auto-convert ke Write Review</span>
+                    </div>
+
+                    <Input
+                      value={directReviewUrl}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        const parsed = parseMapsUrl(val);
+                        if (parsed) {
+                          if (parsed.name && !businessName) {
+                            setBusinessName(parsed.name);
+                          }
+                          setDirectReviewUrl(parsed.rawUrl);
+                          if (parsed.rawUrl.includes('writereview')) {
+                            toast.success('Otomatis diubah menjadi link langsung ke form ulasan bintang 5!');
+                          }
+                        } else {
+                          setDirectReviewUrl(val);
+                        }
+                      }}
+                      placeholder="Paste link Google Maps di sini (https://maps.app.goo.gl/... atau https://google.com/maps/...)"
+                      className="h-10 text-xs rounded-xl border-blue-200 bg-white font-mono"
+                    />
+
+                    <div className="flex items-start gap-2 pt-1 text-[11px] text-blue-900/80 leading-relaxed">
+                      <Sparkles className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
+                      <span>
+                        Paste link Google Maps apa saja. Sistem akan <strong>otomatis mengonversinya</strong> menjadi form pop-up bintang 5 (Write Review) saat tamu tap kartu.
+                      </span>
+                    </div>
+
+                    {directReviewUrl && (
+                      <div className="pt-2 flex items-center justify-between border-t border-blue-200/60">
+                        <span className="text-[10px] font-mono text-slate-500 truncate max-w-[260px]">
+                          Target: {directReviewUrl}
+                        </span>
+                        <a
+                          href={directReviewUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-700 hover:text-blue-900 underline"
+                        >
+                          <ExternalLink className="h-3 w-3" /> Tes Buka Link
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              /* Jika mode TABLE_HUB aktif: Form lengkap Table Hub */
+              <>
             {/* Profil Brand */}
             <Card className="border-slate-200/80 bg-white shadow-xs rounded-3xl">
               <CardHeader className="pb-3">
@@ -964,7 +1077,8 @@ export default function ManageTag() {
                 )}
               </CardContent>
             </Card>
-
+            </>
+            )}
 
             {/* Bottom Save Bar */}
             <div className="sticky bottom-4 bg-white/95 backdrop-blur-md p-4 rounded-2xl border border-slate-200 shadow-lg flex items-center justify-between">
@@ -985,23 +1099,60 @@ export default function ManageTag() {
             <div className="flex items-center justify-between w-full max-w-[340px] px-2 text-xs font-bold text-slate-600">
               <span className="flex items-center gap-1.5">
                 <Smartphone className="h-4 w-4 text-black" />
-                <span>Live Mobile Preview</span>
+                <span>Live Preview {productType === 'DIRECT_REVIEW' ? 'Direct Review' : 'Table Hub'}</span>
               </span>
               <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-200/70 text-slate-700">
-                Meja Tamu
+                {productType === 'DIRECT_REVIEW' ? 'Lompat Instan' : 'Meja Tamu'}
               </span>
             </div>
 
-            <MobilePreview
-              businessName={businessName}
-              tagline={tagline}
-              avatarUrl={avatarUrl}
-              coverUrl={coverUrl}
-              customLinks={customLinks}
-              instagram={instagram}
-              youtube={youtube}
-              tiktok={tiktok}
-            />
+            {productType === 'DIRECT_REVIEW' ? (
+              /* Preview Tampilan Direct Review HP */
+              <div className="relative w-full max-w-[330px] rounded-[48px] bg-slate-950 p-3 shadow-2xl ring-1 ring-slate-900/10">
+                <div className="relative aspect-[9/18.5] w-full overflow-hidden rounded-[38px] bg-slate-50 flex flex-col items-center justify-center p-6 text-center">
+                  <div className="w-16 h-16 rounded-3xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500 mb-4 shadow-sm animate-pulse">
+                    <Star className="w-8 h-8 fill-amber-400" />
+                  </div>
+                  <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-slate-400 mb-1">
+                    NFC Direct Review
+                  </span>
+                  <h3 className="text-base font-bold text-slate-900 mb-1 leading-snug">
+                    {businessName || 'Nama Bisnis'}
+                  </h3>
+                  <p className="text-xs text-slate-500 mb-6">
+                    Smartphone pengunjung langsung dialihkan ke form review:
+                  </p>
+                  
+                  <div className="w-full p-4 rounded-2xl bg-white border border-slate-200 shadow-sm flex flex-col items-center gap-2">
+                    <div className="flex gap-1 text-amber-400 text-lg">
+                      ★★★★★
+                    </div>
+                    <span className="text-xs font-bold text-slate-800">
+                      Beri Ulasan Bintang 5
+                    </span>
+                    <span className="text-[10px] text-blue-600 font-mono truncate max-w-[220px]">
+                      {directReviewUrl ? directReviewUrl.replace('https://', '') : 'Belum diisi link'}
+                    </span>
+                  </div>
+
+                  <div className="mt-6 flex items-center gap-1.5 text-[11px] text-slate-400">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                    <span>Lompat instan tanpa klik menu</span>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <MobilePreview
+                businessName={businessName}
+                tagline={tagline}
+                avatarUrl={avatarUrl}
+                coverUrl={coverUrl}
+                customLinks={customLinks}
+                instagram={instagram}
+                youtube={youtube}
+                tiktok={tiktok}
+              />
+            )}
 
           </div>
         </div>
