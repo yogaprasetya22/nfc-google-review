@@ -48,6 +48,7 @@ export default function ManageTag() {
 
   // Balas masukan tamu oleh Admin di CMS
   const [activeReplyFbId, setActiveReplyFbId] = useState<string | null>(null);
+  const [adminReplyTarget, setAdminReplyTarget] = useState<{ name: string; text: string } | null>(null);
   const [replyAdminText, setReplyAdminText] = useState('');
   const [adminName, setAdminName] = useState('Admin Resto');
 
@@ -184,7 +185,9 @@ export default function ManageTag() {
               sender: 'admin' as const,
               sender_name: adminName.trim() || 'Admin Resto',
               message: replyAdminText.trim(),
-              created_at: new Date().toISOString()
+              created_at: new Date().toISOString(),
+              reply_to_name: adminReplyTarget?.name,
+              reply_to_text: adminReplyTarget?.text
             }
           ]
         };
@@ -195,6 +198,7 @@ export default function ManageTag() {
     setFeedbacks(updated);
     setReplyAdminText('');
     setActiveReplyFbId(null);
+    setAdminReplyTarget(null);
     toast.success('Balasan admin berhasil ditambahkan! Jangan lupa klik "Simpan Perubahan".');
   }
 
@@ -797,16 +801,40 @@ export default function ManageTag() {
                                     })}
                                   </span>
                                 </div>
+
+                                {rep.reply_to_name && (
+                                  <div className="mb-1 px-2 py-0.5 rounded bg-black/5 border-l-2 border-slate-300 text-[10px] text-slate-500 line-clamp-1 italic">
+                                    Membalas <span className="font-bold text-slate-700">{rep.reply_to_name}</span>: "{rep.reply_to_text}"
+                                  </div>
+                                )}
+
                                 <p className="text-xs leading-snug">{rep.message}</p>
                               </div>
-                              <button
-                                type="button"
-                                onClick={() => handleDeleteReply(fb.id, rep.id)}
-                                className="text-slate-400 hover:text-red-600 p-0.5 rounded cursor-pointer"
-                                title="Hapus balasan"
-                              >
-                                <Trash2 className="w-3 h-3" />
-                              </button>
+                              <div className="flex items-center gap-1 shrink-0">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setActiveReplyFbId(fb.id);
+                                    setAdminReplyTarget({
+                                      name: rep.sender_name || (rep.sender === 'admin' ? 'Admin Resto' : 'Tamu'),
+                                      text: rep.message
+                                    });
+                                    setReplyAdminText('');
+                                  }}
+                                  className="text-slate-400 hover:text-amber-700 p-1 rounded cursor-pointer"
+                                  title="Balas pesan ini"
+                                >
+                                  <CornerDownRight className="w-3 h-3" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteReply(fb.id, rep.id)}
+                                  className="text-slate-400 hover:text-red-600 p-1 rounded cursor-pointer"
+                                  title="Hapus balasan"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </button>
+                              </div>
                             </div>
                           ))}
                         </div>
@@ -820,23 +848,43 @@ export default function ManageTag() {
                         <button
                           type="button"
                           onClick={() => {
-                            if (activeReplyFbId === fb.id) {
+                            if (activeReplyFbId === fb.id && !adminReplyTarget) {
                               setActiveReplyFbId(null);
                             } else {
                               setActiveReplyFbId(fb.id);
+                              setAdminReplyTarget({
+                                name: fb.sender_name || 'Tamu Meja',
+                                text: fb.comment
+                              });
                               setReplyAdminText('');
                             }
                           }}
                           className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 hover:text-amber-900 bg-amber-50 hover:bg-amber-100 px-2.5 py-1 rounded-lg border border-amber-200 transition-colors cursor-pointer"
                         >
                           <CornerDownRight className="w-3 h-3" />
-                          <span>{activeReplyFbId === fb.id ? 'Batal Balas' : 'Balas sebagai Admin'}</span>
+                          <span>{activeReplyFbId === fb.id ? 'Tutup Balasan' : 'Balas sebagai Admin'}</span>
                         </button>
                       </div>
 
                       {/* Input Balasan Admin */}
                       {activeReplyFbId === fb.id && (
                         <div className="p-2.5 rounded-xl bg-amber-50/50 border border-amber-200 space-y-2 animate-in fade-in duration-150">
+                          {/* Quote Preview */}
+                          {adminReplyTarget && (
+                            <div className="flex items-center justify-between px-2.5 py-1 bg-amber-100/70 border border-amber-300 rounded-lg text-[10px] text-amber-950">
+                              <span className="truncate">
+                                Membalas <strong>{adminReplyTarget.name}</strong>: "{adminReplyTarget.text}"
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => setAdminReplyTarget(null)}
+                                className="text-amber-800 hover:text-black font-bold ml-1 cursor-pointer"
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          )}
+
                           <div className="flex items-center gap-2">
                             <span className="text-[10px] font-bold text-amber-900">Nama Pengirim:</span>
                             <input
@@ -852,7 +900,7 @@ export default function ManageTag() {
                               type="text"
                               value={replyAdminText}
                               onChange={(e) => setReplyAdminText(e.target.value)}
-                              placeholder="Tulis balasan resmi resto..."
+                              placeholder={adminReplyTarget ? `Balas @${adminReplyTarget.name}...` : "Tulis balasan resmi resto..."}
                               className="flex-1 text-xs px-3 py-1.5 rounded-lg border border-amber-200 bg-white focus:outline-none focus:ring-1 focus:ring-amber-500"
                               autoFocus
                               onKeyDown={(e) => {

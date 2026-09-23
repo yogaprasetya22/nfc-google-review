@@ -27,6 +27,8 @@ export interface FeedbackReply {
   sender_name?: string;
   message: string;
   created_at: string;
+  reply_to_name?: string;
+  reply_to_text?: string;
 }
 
 export interface FeedbackItem {

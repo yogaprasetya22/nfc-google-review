@@ -27,6 +27,7 @@ export function TableHubPortal({ tag, reviewUrl }: TableHubPortalProps) {
 
   // State untuk balas komentar di portal
   const [activeReplyFbId, setActiveReplyFbId] = useState<string | null>(null);
+  const [replyTarget, setReplyTarget] = useState<{ name: string; text: string } | null>(null);
   const [replyText, setReplyText] = useState('');
   const [submittingReply, setSubmittingReply] = useState(false);
 
@@ -146,7 +147,9 @@ export function TableHubPortal({ tag, reviewUrl }: TableHubPortalProps) {
               sender: 'guest' as const,
               sender_name: guestName.trim() || 'Tamu',
               message: replyText.trim(),
-              created_at: new Date().toISOString()
+              created_at: new Date().toISOString(),
+              reply_to_name: replyTarget?.name,
+              reply_to_text: replyTarget?.text
             }
           ]
         };
@@ -176,6 +179,7 @@ export function TableHubPortal({ tag, reviewUrl }: TableHubPortalProps) {
         setFeedbacksList(updated);
         setReplyText('');
         setActiveReplyFbId(null);
+        setReplyTarget(null);
         toast.success('Balasan terkirim!');
       } else {
         toast.error(`Gagal mengirim balasan: ${error.message}`);
@@ -636,7 +640,7 @@ export function TableHubPortal({ tag, reviewUrl }: TableHubPortalProps) {
 
                     {/* Thread Balasan (Admin & Tamu) */}
                     {fb.replies && fb.replies.length > 0 && (
-                      <div className="pl-4 space-y-1.5 border-l-2 border-slate-200">
+                      <div className="pl-4 space-y-2 border-l-2 border-slate-200">
                         {fb.replies.map((rep) => (
                           <div
                             key={rep.id}
@@ -668,7 +672,34 @@ export function TableHubPortal({ tag, reviewUrl }: TableHubPortalProps) {
                                 })}
                               </span>
                             </div>
+
+                            {/* Quote Box jika membalas pesan tertentu */}
+                            {rep.reply_to_name && (
+                              <div className="mb-1.5 px-2 py-1 rounded bg-black/5 border-l-2 border-slate-400 text-[10px] text-slate-600 line-clamp-1 italic">
+                                Membalas <span className="font-bold text-slate-800">{rep.reply_to_name}</span>: "{rep.reply_to_text}"
+                              </div>
+                            )}
+
                             <p className="leading-snug">{rep.message}</p>
+
+                            {/* Tombol Balas Chat Ini */}
+                            <div className="flex justify-end pt-1">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setActiveReplyFbId(fb.id);
+                                  setReplyTarget({
+                                    name: rep.sender_name || (rep.sender === 'admin' ? 'Admin' : 'Tamu'),
+                                    text: rep.message
+                                  });
+                                  setReplyText('');
+                                }}
+                                className="inline-flex items-center gap-1 text-[10px] font-bold text-slate-500 hover:text-slate-800 cursor-pointer"
+                              >
+                                <CornerDownRight className="w-2.5 h-2.5" />
+                                <span>Balas</span>
+                              </button>
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -676,13 +707,29 @@ export function TableHubPortal({ tag, reviewUrl }: TableHubPortalProps) {
 
                     {/* Input Balasan Cepat jika aktif */}
                     {activeReplyFbId === fb.id && (
-                      <div className="pl-4 pt-1 space-y-2 animate-in fade-in duration-150">
+                      <div className="pl-4 pt-1 space-y-1.5 animate-in fade-in duration-150">
+                        {/* Quote Indicator saat mengetik balasan */}
+                        {replyTarget && (
+                          <div className="flex items-center justify-between px-2.5 py-1 bg-sky-50 border border-sky-200 rounded-lg text-[10px] text-sky-900">
+                            <span className="truncate">
+                              Membalas <strong>{replyTarget.name}</strong>: "{replyTarget.text}"
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setReplyTarget(null)}
+                              className="text-sky-600 hover:text-sky-900 font-bold ml-1 cursor-pointer"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        )}
+
                         <div className="flex gap-2">
                           <input
                             type="text"
                             value={replyText}
                             onChange={(e) => setReplyText(e.target.value)}
-                            placeholder="Tulis balasan Anda..."
+                            placeholder={replyTarget ? `Balas @${replyTarget.name}...` : "Tulis balasan Anda..."}
                             className="flex-1 text-xs px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-1 focus:ring-black"
                             autoFocus
                             onKeyDown={(e) => {
