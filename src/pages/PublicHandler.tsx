@@ -159,7 +159,7 @@ export default function PublicHandler() {
       try {
         // ponytail: Photon + Nominatim combo, Photon lebih akurat untuk nama bisnis
         const [photonRes, nominatimRes] = await Promise.allSettled([
-          fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(raw)}&limit=5&lang=id&lat=-6.2&lon=106.8`),
+          fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(raw)}&limit=8&lat=-6.2&lon=106.8`),
           fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(raw)}&addressdetails=1&limit=3&countrycodes=id`, {
             headers: { 'Accept-Language': 'id', 'User-Agent': 'NFC-Review-SmartStand/1.0' }
           })
@@ -172,11 +172,13 @@ export default function PublicHandler() {
           const photonData = await photonRes.value.json();
           for (const f of (photonData.features || [])) {
             const props = f.properties || {};
+            if (props.countrycode && props.countrycode !== 'ID') continue;
             const name = props.name || '';
             const city = props.city || props.county || '';
             const street = props.street || '';
             const state = props.state || '';
-            const address = [street, city, state].filter(Boolean).join(', ') || props.country || '';
+            const district = props.district || '';
+            const address = [street, district, city, state].filter(Boolean).join(', ') || props.country || '';
             const key = `${name}-${city}`.toLowerCase();
 
             if (name && !seenNames.has(key)) {

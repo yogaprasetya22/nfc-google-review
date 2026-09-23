@@ -3,7 +3,7 @@ import type { CustomLink } from '@/types/nfc';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, Trash2, Sparkles, MapPin, Search, Loader2, CheckCircle2, Navigation, FileText, Upload, Link as LinkIcon, FileCheck } from 'lucide-react';
+import { Plus, Trash2, Sparkles, MapPin, Search, Loader2, CheckCircle2, Navigation, FileText, Upload, Link as LinkIcon, FileCheck, ExternalLink } from 'lucide-react';
 import { parseMapsUrl } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
@@ -68,7 +68,7 @@ export function LinkCardsEditor({
     const directGoogleOption: PlaceSuggestion = {
       place_id: `NAME-${encodeURIComponent(raw)}`,
       name: raw,
-      address: `Cari langsung di Google Maps: "${raw}"`,
+      address: `Buka Google Maps untuk cari "${raw}" lalu copy link-nya`,
       category: 'Google Maps',
       source: 'google',
       direct_url: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(raw)}`
@@ -82,7 +82,7 @@ export function LinkCardsEditor({
         // ponytail: Photon (Komoot) jauh lebih akurat untuk nama bisnis/POI daripada Nominatim
         // Bias lokasi Indonesia (Jakarta) agar hasil lebih relevan
         const [photonRes, nominatimRes] = await Promise.allSettled([
-          fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(raw)}&limit=5&lang=id&lat=-6.2&lon=106.8`),
+          fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(raw)}&limit=8&lat=-6.2&lon=106.8`),
           fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(raw)}&addressdetails=1&limit=3&countrycodes=id`, {
             headers: { 'Accept-Language': 'id', 'User-Agent': 'NFC-Review-SmartStand/1.0' }
           })
@@ -97,18 +97,21 @@ export function LinkCardsEditor({
           const features = photonData.features || [];
           for (const f of features) {
             const props = f.properties || {};
+            // Filter hanya hasil Indonesia
+            if (props.countrycode && props.countrycode !== 'ID') continue;
             const name = props.name || '';
             const city = props.city || props.county || '';
             const street = props.street || '';
             const state = props.state || '';
-            const address = [street, city, state].filter(Boolean).join(', ') || props.country || '';
+            const district = props.district || '';
+            const address = [street, district, city, state].filter(Boolean).join(', ') || props.country || '';
             const osmType = props.osm_value || props.type || '';
             const key = `${name}-${city}`.toLowerCase();
 
             if (name && !seenNames.has(key)) {
               seenNames.add(key);
               results.push({
-                place_id: `PHOTON-${f.properties.osm_id || results.length}`,
+                place_id: `PHOTON-${props.osm_id || results.length}`,
                 name,
                 address: address || 'Indonesia',
                 category: osmType.replace(/_/g, ' ') || 'Lokasi',
@@ -469,7 +472,7 @@ export function LinkCardsEditor({
                     <div className="p-3 bg-blue-50/70 rounded-xl border border-blue-200 space-y-2 mb-2 relative" ref={searchDropdownRef}>
                       <div className="flex items-center justify-between">
                         <span className="text-[10px] font-bold text-blue-900 flex items-center gap-1">
-                          <MapPin className="w-3 h-3 text-blue-600" /> Cari Tempat &amp; Alamat di Google Maps
+                          <MapPin className="w-3 h-3 text-blue-600" /> Cari Lokasi Bisnis
                         </span>
                         <span className="text-[9px] text-blue-600">Ketik nama toko atau paste link maps</span>
                       </div>
@@ -478,7 +481,7 @@ export function LinkCardsEditor({
                           autoFocus
                           value={searchQuery}
                           onChange={(e) => setSearchQuery(e.target.value)}
-                          placeholder="Ketik nama bisnis Anda (contoh: adalahh bsd)..."
+                          placeholder="Ketik nama bisnis atau paste link Google Maps..."
                           className="h-8 pl-8 pr-8 text-xs bg-white rounded-lg border-blue-300 focus-visible:ring-blue-600"
                         />
                         <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-blue-500" />
@@ -489,39 +492,68 @@ export function LinkCardsEditor({
 
                       {/* Dropdown Suggestions */}
                       {suggestions.length > 0 && (
-                        <div className="rounded-xl border border-blue-200 bg-white shadow-lg overflow-hidden max-h-48 overflow-y-auto divide-y divide-slate-100">
+                        <div className="rounded-xl border border-blue-200 bg-white shadow-lg overflow-hidden max-h-56 overflow-y-auto divide-y divide-slate-100">
                           {suggestions.map((item, sIdx) => (
-                            <button
-                              key={sIdx}
-                              type="button"
-                              onClick={() => handleSelectPlace(idx, item)}
-                              className="w-full text-left p-2 hover:bg-blue-50/70 transition-colors flex items-start gap-2 cursor-pointer"
-                            >
-                              <div className="p-1 rounded-md bg-blue-50 text-blue-600 shrink-0 mt-0.5">
-                                {item.source === 'url' ? (
-                                  <Navigation className="h-3.5 w-3.5" />
-                                ) : (
-                                  <MapPin className="h-3.5 w-3.5" />
-                                )}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-1.5">
-                                  <span className="text-xs font-bold text-slate-900 truncate">
-                                    {item.name}
-                                  </span>
-                                  <span className="text-[9px] px-1 py-0.2 rounded bg-slate-100 text-slate-600 font-mono">
-                                    {item.category || item.source}
-                                  </span>
+                            item.source === 'google' ? (
+                              /* Opsi Google Maps: buka di tab baru, lalu user paste link kembali */
+                              <a
+                                key={sIdx}
+                                href={item.direct_url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="w-full text-left p-2.5 bg-gradient-to-r from-blue-50 to-white hover:from-blue-100 transition-colors flex items-center gap-2.5 cursor-pointer"
+                              >
+                                <div className="p-1.5 rounded-lg bg-blue-600 text-white shrink-0">
+                                  <Search className="h-3.5 w-3.5" />
                                 </div>
-                                <p className="text-[10px] text-slate-500 truncate leading-snug">
-                                  {item.address}
-                                </p>
-                              </div>
-                              <CheckCircle2 className="h-3.5 w-3.5 text-blue-600 shrink-0 self-center opacity-0 hover:opacity-100" />
-                            </button>
+                                <div className="flex-1 min-w-0">
+                                  <span className="text-xs font-bold text-blue-900">
+                                    Cari "{item.name}" di Google Maps
+                                  </span>
+                                  <p className="text-[10px] text-blue-600 leading-snug">
+                                    Buka Google Maps → Copy link bisnis → Paste di sini
+                                  </p>
+                                </div>
+                                <ExternalLink className="h-3.5 w-3.5 text-blue-500 shrink-0" />
+                              </a>
+                            ) : (
+                              <button
+                                key={sIdx}
+                                type="button"
+                                onClick={() => handleSelectPlace(idx, item)}
+                                className="w-full text-left p-2 hover:bg-blue-50/70 transition-colors flex items-start gap-2 cursor-pointer"
+                              >
+                                <div className="p-1 rounded-md bg-blue-50 text-blue-600 shrink-0 mt-0.5">
+                                  {item.source === 'url' ? (
+                                    <Navigation className="h-3.5 w-3.5" />
+                                  ) : (
+                                    <MapPin className="h-3.5 w-3.5" />
+                                  )}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-xs font-bold text-slate-900 truncate">
+                                      {item.name}
+                                    </span>
+                                    <span className="text-[9px] px-1 py-0.5 rounded bg-slate-100 text-slate-600 font-mono">
+                                      {item.category || item.source}
+                                    </span>
+                                  </div>
+                                  <p className="text-[10px] text-slate-500 truncate leading-snug">
+                                    {item.address}
+                                  </p>
+                                </div>
+                                <CheckCircle2 className="h-3.5 w-3.5 text-blue-600 shrink-0 self-center" />
+                              </button>
+                            )
                           ))}
                         </div>
                       )}
+
+                      {/* Petunjuk paste link */}
+                      <div className="text-[9px] text-blue-700/70 text-center pt-1">
+                        Tip: Buka Google Maps di browser, cari bisnis Anda, lalu copy & paste link-nya di kolom di atas
+                      </div>
                     </div>
                   )}
 
