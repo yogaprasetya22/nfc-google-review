@@ -5,6 +5,7 @@ import { LinkIconBadge } from './LinkIconBadge';
 import { ExternalLink, Camera, Settings2, Gift, Play, Music, Sparkles, Wifi as WifiIcon, Copy, X, Check, QrCode, MessageSquare, Send, Star, Loader2, MessageCircle, CornerDownRight, ShieldCheck, User } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
+import { parseMapsUrl } from '@/lib/utils';
 
 interface TableHubPortalProps {
   tag: NfcTagEntity;
@@ -362,10 +363,20 @@ export function TableHubPortal({ tag, reviewUrl }: TableHubPortalProps) {
 
               {/* Action Link Tiles List */}
               <nav aria-label="Guest Actions" className="flex flex-col gap-3">
-                {linksToRender.map((link, idx) => (
+                {linksToRender.map((link, idx) => {
+                  // ponytail: jika link adalah google review atau google maps, pastikan direct writereview
+                  let hrefUrl = link.url === '#wifi' ? undefined : (link.icon === 'google' && !link.url ? reviewUrl : link.url);
+                  if (hrefUrl && link.icon === 'google') {
+                    const parsed = parseMapsUrl(hrefUrl);
+                    if (parsed?.rawUrl && parsed.rawUrl.includes('writereview')) {
+                      hrefUrl = parsed.rawUrl;
+                    }
+                  }
+
+                  return (
                   <a
                     key={link.id || idx}
-                    href={link.url === '#wifi' ? undefined : (link.icon === 'google' && !link.url ? reviewUrl : link.url)}
+                    href={hrefUrl}
                     target={link.url === '#wifi' ? undefined : '_blank'}
                     rel="noreferrer"
                     onClick={(e) => handleLinkClick(link, e)}
@@ -418,7 +429,8 @@ export function TableHubPortal({ tag, reviewUrl }: TableHubPortalProps) {
                       </div>
                     </div>
                   </a>
-                ))}
+                  );
+                })}
               </nav>
 
               {/* Social Icons Row if available */}
