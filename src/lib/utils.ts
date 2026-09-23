@@ -5,26 +5,44 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-// Ekstrak nama dan alamat dari URL Google Maps
+// Ekstrak nama dan alamat dari URL Google Maps / Google Review
 export function parseMapsUrl(input: string): { name: string; address: string; rawUrl: string } | null {
   const trimmed = input.trim();
   const isMapsUrl = 
     trimmed.includes('google.com/maps') || 
     trimmed.includes('maps.app.goo.gl') || 
     trimmed.includes('goo.gl/maps') ||
-    trimmed.includes('maps.google.');
+    trimmed.includes('maps.google.') ||
+    (trimmed.includes('google.com/search') && trimmed.includes('#lrd=')) ||
+    trimmed.includes('search.google.com/local/writereview');
 
   if (!isMapsUrl) {
     return null;
   }
 
-  // Bersihkan karakter aneh di ujung (misal tanda titik ".")
+  // Bersihkan karakter aneh di ujung
   const cleanUrl = trimmed.replace(/[.,;!?]+$/, '');
 
   let address = '';
   let name = '';
 
   try {
+    // Untuk google.com/search#lrd= — ambil nama dari parameter q
+    if (cleanUrl.includes('google.com/search') && cleanUrl.includes('#lrd=')) {
+      const url = new URL(cleanUrl);
+      const q = url.searchParams.get('q') || url.searchParams.get('query');
+      if (q) {
+        const decoded = decodeURIComponent(q).replace(/\+/g, ' ');
+        name = decoded.split(',')[0].trim();
+        address = `Google Review - ${name}`;
+      }
+      return {
+        name: name || 'Google Review',
+        address: address || 'Link review langsung dari Google',
+        rawUrl: cleanUrl
+      };
+    }
+
     const url = new URL(cleanUrl);
 
     const daddr = url.searchParams.get('daddr');
