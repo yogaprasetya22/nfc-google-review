@@ -139,8 +139,35 @@ export default function ManageTag() {
 
     setIsAuthenticated(true);
     toast.success('Login CMS berhasil!');
-
   }
+
+  // Realtime listener untuk CMS Admin agar masukan/chat meja masuk seketika
+  React.useEffect(() => {
+    if (!isAuthenticated || !tagId) return;
+
+    const channel = supabase
+      .channel(`realtime-cms-${tagId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'nfc_tags',
+          filter: `id=eq.${tagId}`
+        },
+        (payload) => {
+          const updatedTag = payload.new as NfcTagEntity;
+          if (updatedTag?.hub_config?.feedbacks) {
+            setFeedbacks(updatedTag.hub_config.feedbacks);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [isAuthenticated, tagId]);
 
 
   function handleAddLink(preset?: Partial<CustomLink>) {

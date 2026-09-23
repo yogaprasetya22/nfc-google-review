@@ -203,3 +203,9 @@ BEGIN
     RETURN TRUE;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- =========================================================================
+-- 6. REALTIME REPLICATION (Untuk Live Chat Meja & Admin)
+-- =========================================================================
+ALTER PUBLICATION supabase_realtime ADD TABLE public.nfc_tags;
+ALTER TABLE public.nfc_tags REPLICA IDENTITY FULL;

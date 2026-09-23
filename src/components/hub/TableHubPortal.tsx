@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import type { NfcTagEntity, FeedbackItem } from '@/types/nfc';
 import { LinkIconBadge } from './LinkIconBadge';
@@ -24,6 +24,34 @@ export function TableHubPortal({ tag, reviewUrl }: TableHubPortalProps) {
   const [rating, setRating] = useState<number>(5);
   const [submittingFeedback, setSubmittingFeedback] = useState(false);
   const [feedbacksList, setFeedbacksList] = useState<FeedbackItem[]>(cfg.feedbacks || []);
+
+  // Supabase Realtime: dengarkan perubahan baris tag ini secara live
+  useEffect(() => {
+    if (!tag?.id) return;
+
+    const channel = supabase
+      .channel(`realtime-tag-${tag.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'nfc_tags',
+          filter: `id=eq.${tag.id}`
+        },
+        (payload) => {
+          const updatedTag = payload.new as NfcTagEntity;
+          if (updatedTag?.hub_config?.feedbacks) {
+            setFeedbacksList(updatedTag.hub_config.feedbacks);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [tag?.id]);
 
   // State untuk balas komentar di portal
   const [activeReplyFbId, setActiveReplyFbId] = useState<string | null>(null);
@@ -640,7 +668,7 @@ export function TableHubPortal({ tag, reviewUrl }: TableHubPortalProps) {
 
                     {/* Thread Balasan (Admin & Tamu) */}
                     {fb.replies && fb.replies.length > 0 && (
-                      <div className="pl-4 space-y-2 border-l-2 border-slate-200">
+                      <div className="pl-4 space-y-2 border-l-2 border-slate-200 pb-2">
                         {fb.replies.map((rep) => (
                           <div
                             key={rep.id}
