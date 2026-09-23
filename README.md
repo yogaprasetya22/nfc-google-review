@@ -1,10 +1,10 @@
-# ⚡ NFC Tap Smart Portal (Google Review & Table Hub)
+# NFC Tap Smart Portal (Google Review & Table Hub)
 
-A modern, high-performance web platform built with **React**, **TypeScript**, **Tailwind CSS**, and **Supabase** designed for physical NFC tags / QR stands used in F&B venues, cafes, restaurants, and retail spaces.
+A modern, high-performance web platform built with React, TypeScript, Tailwind CSS, and Supabase designed for physical NFC tags / QR stands used in F&B venues, cafes, restaurants, and retail spaces.
 
 ---
 
-## 🌟 Key Features
+## Key Features
 
 ### 1. Dual Mode System
 - **DIRECT_REVIEW**: Instant redirect to Google Maps write-review page or specific review URL for quick rating gathering.
@@ -12,12 +12,12 @@ A modern, high-performance web platform built with **React**, **TypeScript**, **
 
 ### 2. Table Hub Guest Experience
 - **Interactive Call-to-Actions:**
-  - ⭐ **Google Maps Review**: Direct link to write a review with auto-rating encouragement.
-  - 🍽️ **View Menu (2 Opsi)**: Supports both **Direct PDF Menu document upload** and external web/drive URLs.
-  - 📶 **One-Tap Wi-Fi Connection**: Instant clipboard copy of the Wi-Fi password + auto-generated native Wi-Fi QR Code for camera scanning on Android & iOS.
-  - 💬 **Anonymous Guest Feedback**: In-app private comment box and 5-star rating delivered straight to the merchant's CMS inbox.
-  - 🎁 **Loyalty & Rewards**: Link to rewards program or promo pages.
-  - 🎮 **Mini Games / Sudoku**: Keep waiting guests entertained at the table.
+  - **Google Maps Review**: Direct link to write a review with auto-rating encouragement.
+  - **View Menu (2 Opsi)**: Supports both direct PDF Menu document upload and external web/drive URLs.
+  - **One-Tap Wi-Fi Connection**: Instant clipboard copy of the Wi-Fi password + auto-generated native Wi-Fi QR Code for camera scanning on Android & iOS.
+  - **Anonymous Guest Feedback**: In-app private comment box and 5-star rating delivered straight to the merchant's CMS inbox.
+  - **Loyalty & Rewards**: Link to rewards program or promo pages.
+  - **Mini Games / Sudoku**: Keep waiting guests entertained at the table.
 - **Social Media Bar**: Quick links for Instagram, YouTube, TikTok, and WhatsApp.
 
 ### 3. Merchant CMS & Admin Dashboard
@@ -29,7 +29,7 @@ A modern, high-performance web platform built with **React**, **TypeScript**, **
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 - **Runtime & Package Manager**: [Bun](https://bun.sh/)
 - **Frontend Framework**: React 19 + TypeScript
@@ -39,7 +39,7 @@ A modern, high-performance web platform built with **React**, **TypeScript**, **
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### 1. Clone & Install Dependencies
 
@@ -66,7 +66,7 @@ VITE_SUPABASE_ANON_KEY=your-anon-key
 
 ### 3. Setup Supabase Database & Storage
 
-Run the SQL script found in `supabase_schema.sql` inside your **Supabase SQL Editor**:
+Run the SQL script found in `supabase_schema.sql` inside your Supabase SQL Editor:
 - Creates `nfc_tags` table with JSONB `hub_config`
 - Sets up Row Level Security (RLS) policies
 - Configures Storage bucket policies for `nfc` bucket (avatars, covers, PDF menus)
@@ -81,7 +81,7 @@ Open [http://localhost:5173](http://localhost:5173) in your browser.
 
 ---
 
-## 📂 Project Structure
+## Project Structure
 
 ```
 ├── public/                 # Static assets
@@ -108,11 +108,11 @@ Open [http://localhost:5173](http://localhost:5173) in your browser.
 
 ---
 
-## 🔒 Security & Privacy
+## Security & Privacy
 - Sensitive credentials (`.env`) are strictly excluded via `.gitignore`.
 - Password changes and hub configuration updates are protected via database RPC PIN verification.
 
 ---
 
-## 📄 License
+## License
 MIT License. Created by [Yoga Prasetya](https://github.com/yogaprasetya22).
