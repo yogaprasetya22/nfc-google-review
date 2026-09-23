@@ -89,6 +89,54 @@ export default function AdminDashboard() {
     }
   }
 
+  // Edit/Ganti ID Tag dari Admin
+  async function handleUpdateTagId(oldId: string, newId: string): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('nfc_tags')
+        .update({ id: newId })
+        .eq('id', oldId);
+
+      if (error) {
+        if (error.code === '23505') {
+          toast.error(`ID "${newId}" sudah digunakan oleh tag lain.`);
+        } else {
+          toast.error(`Gagal mengubah ID: ${error.message}`);
+        }
+        return false;
+      }
+
+      toast.success(`ID Tag berhasil diubah dari ${oldId} menjadi ${newId}`);
+      fetchMetrics();
+      return true;
+    } catch (err: any) {
+      toast.error('Terjadi kesalahan saat mengubah ID.');
+      return false;
+    }
+  }
+
+  // Hapus Tag dari Admin
+  async function handleDeleteTag(tagId: string): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('nfc_tags')
+        .delete()
+        .eq('id', tagId);
+
+      if (error) {
+        toast.error(`Gagal menghapus tag: ${error.message}`);
+        return false;
+      }
+
+      toast.success(`Tag ${tagId} berhasil dihapus.`);
+      fetchMetrics();
+      return true;
+    } catch {
+      toast.error('Terjadi kesalahan saat menghapus tag.');
+      return false;
+    }
+  }
+
   const activeUnits = tags.filter((t) => t.is_active).length;
 
   if (!isAuthenticated) {
@@ -201,7 +249,11 @@ export default function AdminDashboard() {
       </Card>
 
       {/* Tabel Inventaris */}
-      <TagTable tags={tags} />
+      <TagTable
+        tags={tags}
+        onUpdateTagId={handleUpdateTagId}
+        onDeleteTag={handleDeleteTag}
+      />
     </div>
   );
 }
