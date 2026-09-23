@@ -1,18 +1,23 @@
--- 1. Aktifkan Ekstensi yang Dibutuhkan
+-- ==============================================================================
+-- NFC SMART STAND (GOOGLE REVIEW & TABLE HUB) DATABASE SCHEMA
+-- Versi Lengkap: Master Tags, RLS, Storage Bucket 'nfc', dan RPC Stored Procedures
+-- ==============================================================================
+
+-- 1. Ekstensi Kriptografi & UUID
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- 2. Buat Tipe Enum
+-- 2. Tipe Enum Produk
 DO $$ BEGIN
     CREATE TYPE product_type AS ENUM ('DIRECT_REVIEW', 'TABLE_HUB');
 EXCEPTION
     WHEN duplicate_object THEN null;
 END $$;
 
--- 3. Buat Tabel Master NFC Tags
+-- 3. Tabel Master NFC Tags
 CREATE TABLE IF NOT EXISTS public.nfc_tags (
-    id VARCHAR(32) PRIMARY KEY, -- Format: TAG-XXXXX
-    type product_type NOT NULL DEFAULT 'DIRECT_REVIEW',
+    id VARCHAR(32) PRIMARY KEY, -- Format: TAG-XXXXX atau kode custom
+    type product_type NOT NULL DEFAULT 'TABLE_HUB',
     business_name VARCHAR(255),
     google_place_id VARCHAR(255),
     pin_hash VARCHAR(255), -- Bcrypt hash via crypt()
@@ -37,56 +42,80 @@ CREATE TABLE IF NOT EXISTS public.nfc_tags (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Index
+-- Index Pencarian Cepat
 CREATE INDEX IF NOT EXISTS idx_nfc_tags_active ON public.nfc_tags(id) WHERE is_active = TRUE;
 
 -- 4. Setup Row Level Security (RLS) pada nfc_tags
 ALTER TABLE public.nfc_tags ENABLE ROW LEVEL SECURITY;
 
+-- Izinkan publik membaca data tag (untuk portal tamu dan admin)
 DROP POLICY IF EXISTS "Public read tags" ON public.nfc_tags;
 CREATE POLICY "Public read tags" ON public.nfc_tags
     FOR SELECT
     USING (true);
 
+-- Izinkan pembuatan tag baru dari dashboard admin
 DROP POLICY IF EXISTS "Allow anon insert new tag" ON public.nfc_tags;
 CREATE POLICY "Allow anon insert new tag" ON public.nfc_tags
     FOR INSERT
     WITH CHECK (true);
 
+-- Izinkan pembaruan tag (masukan feedback tamu & tap counter)
 DROP POLICY IF EXISTS "Allow anon update tags" ON public.nfc_tags;
 CREATE POLICY "Allow anon update tags" ON public.nfc_tags
     FOR UPDATE
     USING (true)
     WITH CHECK (true);
 
--- 5. Setup Storage Bucket 'nfc' & RLS Storage Policies
--- Otomatis buat bucket 'nfc' jika belum ada dan set public = true
-INSERT INTO storage.buckets (id, name, public)
-VALUES ('nfc', 'nfc', true)
-ON CONFLICT (id) DO UPDATE SET public = true;
+-- Izinkan penghapusan tag dari dashboard admin jika diperlukan
+DROP POLICY IF EXISTS "Allow anon delete tags" ON public.nfc_tags;
+CREATE POLICY "Allow anon delete tags" ON public.nfc_tags
+    FOR DELETE
+    USING (true);
 
--- Policy agar siapapun (anon) bisa melihat & membaca gambar yang diunggah
+-- 5. Setup Storage Bucket 'nfc' & Storage RLS Policies
+-- Membuat bucket 'nfc' otomatis berstatus PUBLIC untuk gambar (WebP) dan berkas PDF Menu
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES (
+    'nfc', 
+    'nfc', 
+    true, 
+    26214400, -- 25 MB limit
+    ARRAY['image/webp', 'image/png', 'image/jpeg', 'image/svg+xml', 'application/pdf']
+)
+ON CONFLICT (id) DO UPDATE SET 
+    public = true,
+    file_size_limit = 26214400,
+    allowed_mime_types = ARRAY['image/webp', 'image/png', 'image/jpeg', 'image/svg+xml', 'application/pdf'];
+
+-- Policy Baca Public Storage
 DROP POLICY IF EXISTS "Public Read NFC Storage" ON storage.objects;
 CREATE POLICY "Public Read NFC Storage" ON storage.objects
     FOR SELECT
     USING (bucket_id = 'nfc');
 
--- Policy agar merchant (anon) bisa mengunggah gambar logo & banner meja yang sudah dikompres
+-- Policy Upload Public Storage (Foto Profil, Banner WebP, Berkas PDF Menu)
 DROP POLICY IF EXISTS "Public Upload NFC Storage" ON storage.objects;
 CREATE POLICY "Public Upload NFC Storage" ON storage.objects
     FOR INSERT
     WITH CHECK (bucket_id = 'nfc');
 
--- Policy agar merchant bisa menimpa / memperbarui gambar dengan nama yang sama
+-- Policy Update Public Storage
 DROP POLICY IF EXISTS "Public Update NFC Storage" ON storage.objects;
 CREATE POLICY "Public Update NFC Storage" ON storage.objects
     FOR UPDATE
     USING (bucket_id = 'nfc')
     WITH CHECK (bucket_id = 'nfc');
 
+-- Policy Delete Public Storage (Hapus file usang)
+DROP POLICY IF EXISTS "Public Delete NFC Storage" ON storage.objects;
+CREATE POLICY "Public Delete NFC Storage" ON storage.objects
+    FOR DELETE
+    USING (bucket_id = 'nfc');
+
 -- 6. Stored Procedures (RPC)
 
--- A. Counter Tap Instan
+-- A. Counter Tap Instan Pengunjung
 CREATE OR REPLACE FUNCTION record_tag_tap(p_tag_id VARCHAR(32))
 RETURNS VOID AS $$
 BEGIN
@@ -96,7 +125,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- B. Aktivasi Tag Mandiri (Bcrypt Salt 8)
+-- B. Aktivasi Mandiri Tag Baru (Bcrypt Salt 8)
 CREATE OR REPLACE FUNCTION activate_nfc_tag(
     p_tag_id VARCHAR(32),
     p_type product_type,
@@ -127,7 +156,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- C. Verifikasi PIN Login CMS
+-- C. Verifikasi PIN Login CMS Meja
 CREATE OR REPLACE FUNCTION verify_tag_pin(
     p_tag_id VARCHAR(32),
     p_pin VARCHAR(32)
@@ -146,7 +175,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- D. Update Konfigurasi CMS Merchant
+-- D. Update Konfigurasi CMS Merchant (Aman dengan Verifikasi PIN)
 CREATE OR REPLACE FUNCTION update_tag_config(
     p_tag_id VARCHAR(32),
     p_pin VARCHAR(32),
@@ -172,4 +201,3 @@ BEGIN
     RETURN TRUE;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
-
