@@ -57,11 +57,17 @@ export default function PublicHandler() {
 
         if (currentTag.type === 'DIRECT_REVIEW') {
           const pid = currentTag.google_place_id || '';
-          const targetUrl = pid.startsWith('URL:')
+          let targetUrl = pid.startsWith('URL:')
             ? pid.replace('URL:', '')
             : pid.startsWith('OSM-') || pid.startsWith('NAME-')
             ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(currentTag.business_name || '')}`
             : `https://search.google.com/local/writereview?placeid=${pid}`;
+
+          // ponytail: double-check jika targetUrl masih link google maps biasa, konversi instan ke writereview
+          const parsed = parseMapsUrl(targetUrl);
+          if (parsed?.rawUrl && parsed.rawUrl.includes('writereview')) {
+            targetUrl = parsed.rawUrl;
+          }
 
           // Langsung redirect seketika
           window.location.replace(targetUrl);
