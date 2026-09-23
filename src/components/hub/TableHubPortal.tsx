@@ -62,12 +62,12 @@ export function TableHubPortal({ tag, reviewUrl }: TableHubPortalProps) {
   const linksToRender = (cfg.custom_links && cfg.custom_links.length > 0
     ? cfg.custom_links
     : [
-        { id: '1', title: 'Leave a Google Review', url: reviewUrl, icon: 'google' as const, highlight: true },
-        { id: '2', title: 'View Menu', url: cfg.menu_url || '#menu', icon: 'menu' as const },
-        { id: '3', title: 'Connect to Wi-Fi', url: '#wifi', icon: 'wifi' as const },
-        { id: '4', title: 'Leave Anonymous Feedback', url: '#feedback', icon: 'feedback' as const },
-        { id: '5', title: 'Play Sudoku', url: 'https://sudoku.com', icon: 'game' as const }
-      ]).filter((link) => link.enabled !== false);
+      { id: '1', title: 'Leave a Google Review', url: reviewUrl, icon: 'google' as const, highlight: true },
+      { id: '2', title: 'View Menu', url: cfg.menu_url || '#menu', icon: 'menu' as const },
+      { id: '3', title: 'Connect to Wi-Fi', url: '#wifi', icon: 'wifi' as const },
+      { id: '4', title: 'Leave Anonymous Feedback', url: '#feedback', icon: 'feedback' as const },
+      { id: '5', title: 'Play Sudoku', url: 'https://sudoku.com', icon: 'game' as const }
+    ]).filter((link) => link.enabled !== false);
 
 
   const handleLinkClick = (link: typeof linksToRender[0], e: React.MouseEvent) => {
@@ -232,7 +232,7 @@ export function TableHubPortal({ tag, reviewUrl }: TableHubPortalProps) {
       <main className="w-full max-w-6xl mx-auto px-4 py-6 md:py-12 flex-1 flex flex-col items-center justify-center">
         {/* Desktop Split / Mobile Centered Container */}
         <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-8 items-start justify-center max-w-5xl">
-          
+
           {/* Venue Info Sidebar (Visible on LG screens, matches Stitch layout) */}
           <aside className="lg:col-span-5 hidden lg:flex flex-col gap-5 lg:sticky lg:top-8 order-2 lg:order-1">
             {/* Cafe Brand Identity Card */}
@@ -320,7 +320,7 @@ export function TableHubPortal({ tag, reviewUrl }: TableHubPortalProps) {
           {/* Interactive Mobile Portal / Right Column */}
           <section className="lg:col-span-7 w-full max-w-md mx-auto order-1 lg:order-2">
             <div className="bg-white/20 backdrop-blur-5xl rounded-[32px] p-5 sm:p-6 border border-white/80 transition-all duration-300 relative overflow-hidden">
-              
+
               {/* Optional Cover Banner */}
               {cfg.cover_url && (
                 <div className="-mx-6 -mt-6 mb-4 h-32 w-[calc(100%+3rem)] relative overflow-hidden">
@@ -369,11 +369,10 @@ export function TableHubPortal({ tag, reviewUrl }: TableHubPortalProps) {
                     target={link.url === '#wifi' ? undefined : '_blank'}
                     rel="noreferrer"
                     onClick={(e) => handleLinkClick(link, e)}
-                    className={`group block relative rounded-2xl p-4 transition-all duration-200 active:scale-[0.99] cursor-pointer ${
-                      link.highlight
+                    className={`group block relative rounded-2xl p-4 transition-all duration-200 active:scale-[0.99] cursor-pointer ${link.highlight
                         ? 'bg-neutral-900 hover:bg-black text-white border border-slate-800 shadow-md'
                         : 'bg-white hover:bg-slate-50/80 border border-slate-200/90 text-slate-800 shadow-xs hover:shadow-sm'
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3.5 min-w-0">
@@ -619,7 +618,7 @@ export function TableHubPortal({ tag, reviewUrl }: TableHubPortalProps) {
                 feedbacksList.map((fb) => (
                   <div key={fb.id} className="pt-3 first:pt-0 space-y-2">
                     {/* Pesan Utama Tamu */}
-                    <div className="p-3 rounded-2xl bg-slate-50/80 border border-slate-200/80 text-left space-y-1.5">
+                    <div className="p-3 rounded-2xl bg-slate-50/80 border border-slate-200/80 text-left space-y-1.5 mb-2">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-1.5">
                           <span className="text-xs font-bold text-slate-800">
@@ -672,11 +671,10 @@ export function TableHubPortal({ tag, reviewUrl }: TableHubPortalProps) {
                         {fb.replies.map((rep) => (
                           <div
                             key={rep.id}
-                            className={`p-2.5 rounded-xl text-left text-xs ${
-                              rep.sender === 'admin'
+                            className={`p-2.5 rounded-xl text-left text-xs ${rep.sender === 'admin'
                                 ? 'bg-amber-50/80 border border-amber-200/90 text-amber-950'
                                 : 'bg-slate-100 text-slate-800'
-                            }`}
+                              }`}
                           >
                             <div className="flex items-center justify-between mb-1">
                               <span className="font-bold text-[11px] flex items-center gap-1">
@@ -803,9 +801,8 @@ export function TableHubPortal({ tag, reviewUrl }: TableHubPortalProps) {
                       className="p-0.5 text-slate-300 hover:scale-110 transition-transform cursor-pointer"
                     >
                       <Star
-                        className={`w-3.5 h-3.5 ${
-                          star <= rating ? 'text-amber-400 fill-amber-400' : 'text-slate-300'
-                        }`}
+                        className={`w-3.5 h-3.5 ${star <= rating ? 'text-amber-400 fill-amber-400' : 'text-slate-300'
+                          }`}
                       />
                     </button>
                   ))}
