@@ -42,7 +42,7 @@ export function LinkCardsEditor({
   const [isSearching, setIsSearching] = useState(false);
   const searchDropdownRef = useRef<HTMLDivElement>(null);
 
-  // Live search OSM/Google Places
+  // Live search: Photon (Komoot) + Nominatim fallback untuk akurasi bisnis maksimal
   useEffect(() => {
     const raw = searchQuery.trim();
     if (!raw) {
@@ -50,25 +50,26 @@ export function LinkCardsEditor({
       return;
     }
 
+    // Jika paste link Google Maps langsung
     const parsedUrl = parseMapsUrl(raw);
     if (parsedUrl) {
-      const urlSuggestion: PlaceSuggestion = {
+      setSuggestions([{
         place_id: `URL:${parsedUrl.rawUrl}`,
         name: parsedUrl.name,
         address: parsedUrl.address,
         category: 'Google Maps Link',
         source: 'url',
         direct_url: parsedUrl.rawUrl
-      };
-      setSuggestions([urlSuggestion]);
+      }]);
       return;
     }
 
+    // Opsi pencarian langsung di Google Maps (selalu ditampilkan pertama)
     const directGoogleOption: PlaceSuggestion = {
       place_id: `NAME-${encodeURIComponent(raw)}`,
       name: raw,
-      address: `Pencarian Google Maps & Ulasan Bisnis "${raw}"`,
-      category: 'Google Business Profile',
+      address: `Cari langsung di Google Maps: "${raw}"`,
+      category: 'Google Maps',
       source: 'google',
       direct_url: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(raw)}`
     };
@@ -78,25 +79,65 @@ export function LinkCardsEditor({
     const timer = setTimeout(async () => {
       setIsSearching(true);
       try {
-        const res = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
-            raw
-          )}&addressdetails=1&limit=4&countrycodes=id`,
-          {
-            headers: {
-              'Accept-Language': 'id',
-              'User-Agent': 'NFC-Review-SmartStand/1.0'
+        // ponytail: Photon (Komoot) jauh lebih akurat untuk nama bisnis/POI daripada Nominatim
+        // Bias lokasi Indonesia (Jakarta) agar hasil lebih relevan
+        const [photonRes, nominatimRes] = await Promise.allSettled([
+          fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(raw)}&limit=5&lang=id&lat=-6.2&lon=106.8`),
+          fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(raw)}&addressdetails=1&limit=3&countrycodes=id`, {
+            headers: { 'Accept-Language': 'id', 'User-Agent': 'NFC-Review-SmartStand/1.0' }
+          })
+        ]);
+
+        const results: PlaceSuggestion[] = [];
+        const seenNames = new Set<string>();
+
+        // Parse Photon results (biasanya lebih akurat untuk nama bisnis)
+        if (photonRes.status === 'fulfilled') {
+          const photonData = await photonRes.value.json();
+          const features = photonData.features || [];
+          for (const f of features) {
+            const props = f.properties || {};
+            const name = props.name || '';
+            const city = props.city || props.county || '';
+            const street = props.street || '';
+            const state = props.state || '';
+            const address = [street, city, state].filter(Boolean).join(', ') || props.country || '';
+            const osmType = props.osm_value || props.type || '';
+            const key = `${name}-${city}`.toLowerCase();
+
+            if (name && !seenNames.has(key)) {
+              seenNames.add(key);
+              results.push({
+                place_id: `PHOTON-${f.properties.osm_id || results.length}`,
+                name,
+                address: address || 'Indonesia',
+                category: osmType.replace(/_/g, ' ') || 'Lokasi',
+                source: 'osm',
+                direct_url: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name + ' ' + city)}`
+              });
             }
           }
-        );
-        const data = await res.json();
-        const results: PlaceSuggestion[] = data.map((item: any) => ({
-          place_id: `OSM-${item.place_id}`,
-          name: item.name || item.display_name.split(',')[0],
-          address: item.display_name,
-          category: item.type ? item.type.replace('_', ' ') : 'Lokasi Terdaftar',
-          source: 'osm'
-        }));
+        }
+
+        // Parse Nominatim results (fallback, bagus untuk alamat)
+        if (nominatimRes.status === 'fulfilled') {
+          const nomData = await nominatimRes.value.json();
+          for (const item of nomData) {
+            const name = item.name || item.display_name.split(',')[0];
+            const key = `${name}-${(item.address?.city || '')}`.toLowerCase();
+            if (!seenNames.has(key)) {
+              seenNames.add(key);
+              results.push({
+                place_id: `OSM-${item.place_id}`,
+                name,
+                address: item.display_name,
+                category: item.type ? item.type.replace(/_/g, ' ') : 'Lokasi',
+                source: 'osm',
+                direct_url: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name)}`
+              });
+            }
+          }
+        }
 
         setSuggestions([directGoogleOption, ...results]);
       } catch {
@@ -104,7 +145,7 @@ export function LinkCardsEditor({
       } finally {
         setIsSearching(false);
       }
-    }, 250);
+    }, 300);
 
     return () => clearTimeout(timer);
   }, [searchQuery]);
@@ -118,7 +159,7 @@ export function LinkCardsEditor({
     setActiveSearchIdx(null);
     setSearchQuery('');
     setSuggestions([]);
-    toast.success(`Lokasi Google Maps "${place.name}" berhasil dihubungkan!`);
+    toast.success(`Lokasi "${place.name}" berhasil dihubungkan ke Google Maps!`);
   };
 
   const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>, linkIdx: number) => {

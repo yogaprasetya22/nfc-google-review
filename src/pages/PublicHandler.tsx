@@ -122,7 +122,7 @@ export default function PublicHandler() {
     }
   }
 
-  // Generate Suggestions secara instan tanpa blocking
+  // Generate Suggestions: Photon + Nominatim untuk akurasi bisnis maksimal
   useEffect(() => {
     const raw = searchQuery.trim();
     if (!raw) {
@@ -132,23 +132,22 @@ export default function PublicHandler() {
 
     const parsedUrl = parseMapsUrl(raw);
     if (parsedUrl) {
-      const urlSuggestion: PlaceSuggestion = {
+      setSuggestions([{
         place_id: `URL:${parsedUrl.rawUrl}`,
         name: businessName || parsedUrl.name,
         address: parsedUrl.address,
         category: 'Google Maps Link',
         source: 'url',
         direct_url: parsedUrl.rawUrl
-      };
-      setSuggestions([urlSuggestion]);
+      }]);
       return;
     }
 
     const directGoogleOption: PlaceSuggestion = {
       place_id: `NAME-${encodeURIComponent(raw)}`,
       name: raw,
-      address: `Profil Google Maps & Ulasan Bisnis "${raw}"`,
-      category: 'Google Business Profile',
+      address: `Cari langsung di Google Maps: "${raw}"`,
+      category: 'Google Maps',
       source: 'google',
       direct_url: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(raw)}`
     };
@@ -158,25 +157,60 @@ export default function PublicHandler() {
     const timer = setTimeout(async () => {
       setIsSearching(true);
       try {
-        const res = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
-            raw
-          )}&addressdetails=1&limit=4&countrycodes=id`,
-          {
-            headers: {
-              'Accept-Language': 'id',
-              'User-Agent': 'NFC-Review-SmartStand/1.0'
+        // ponytail: Photon + Nominatim combo, Photon lebih akurat untuk nama bisnis
+        const [photonRes, nominatimRes] = await Promise.allSettled([
+          fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(raw)}&limit=5&lang=id&lat=-6.2&lon=106.8`),
+          fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(raw)}&addressdetails=1&limit=3&countrycodes=id`, {
+            headers: { 'Accept-Language': 'id', 'User-Agent': 'NFC-Review-SmartStand/1.0' }
+          })
+        ]);
+
+        const results: PlaceSuggestion[] = [];
+        const seenNames = new Set<string>();
+
+        if (photonRes.status === 'fulfilled') {
+          const photonData = await photonRes.value.json();
+          for (const f of (photonData.features || [])) {
+            const props = f.properties || {};
+            const name = props.name || '';
+            const city = props.city || props.county || '';
+            const street = props.street || '';
+            const state = props.state || '';
+            const address = [street, city, state].filter(Boolean).join(', ') || props.country || '';
+            const key = `${name}-${city}`.toLowerCase();
+
+            if (name && !seenNames.has(key)) {
+              seenNames.add(key);
+              results.push({
+                place_id: `PHOTON-${props.osm_id || results.length}`,
+                name,
+                address: address || 'Indonesia',
+                category: (props.osm_value || props.type || '').replace(/_/g, ' ') || 'Lokasi',
+                source: 'osm',
+                direct_url: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name + ' ' + city)}`
+              });
             }
           }
-        );
-        const data = await res.json();
-        const results: PlaceSuggestion[] = data.map((item: any) => ({
-          place_id: `OSM-${item.place_id}`,
-          name: item.name || item.display_name.split(',')[0],
-          address: item.display_name,
-          category: item.type ? item.type.replace('_', ' ') : 'Lokasi Terdaftar',
-          source: 'osm'
-        }));
+        }
+
+        if (nominatimRes.status === 'fulfilled') {
+          const nomData = await nominatimRes.value.json();
+          for (const item of nomData) {
+            const name = item.name || item.display_name.split(',')[0];
+            const key = `${name}-${(item.address?.city || '')}`.toLowerCase();
+            if (!seenNames.has(key)) {
+              seenNames.add(key);
+              results.push({
+                place_id: `OSM-${item.place_id}`,
+                name,
+                address: item.display_name,
+                category: item.type ? item.type.replace(/_/g, ' ') : 'Lokasi',
+                source: 'osm',
+                direct_url: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name)}`
+              });
+            }
+          }
+        }
 
         setSuggestions([directGoogleOption, ...results]);
       } catch {
@@ -184,7 +218,7 @@ export default function PublicHandler() {
       } finally {
         setIsSearching(false);
       }
-    }, 250);
+    }, 300);
 
     return () => clearTimeout(timer);
   }, [searchQuery, businessName]);

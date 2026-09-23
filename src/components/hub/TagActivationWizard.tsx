@@ -176,12 +176,6 @@ export function TagActivationWizard({
                   </div>
 
                   <div className="space-y-1.5 pt-1">
-                    <div className="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-100 text-[11px] text-slate-700 font-medium">
-                      <span className="flex items-center gap-2">
-                        <Heart className="h-3.5 w-3.5 text-rose-500 fill-rose-500" /> Start earning rewards
-                      </span>
-                      <ArrowRight className="h-3 w-3 text-slate-400" />
-                    </div>
                     <div className="flex items-center justify-between p-2 rounded-xl bg-black text-white text-[11px] font-semibold">
                       <span className="flex items-center gap-2">
                         <Star className="h-3.5 w-3.5 text-amber-400 fill-amber-400" /> Leave a Google Review
