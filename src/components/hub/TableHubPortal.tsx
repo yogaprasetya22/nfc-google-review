@@ -239,7 +239,7 @@ export function TableHubPortal({ tag, reviewUrl }: TableHubPortalProps) {
               {/* Table Identifier Chip */}
               <div className="bg-slate-50 rounded-2xl p-3.5 border border-slate-100 flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-amber-100/70 text-amber-800 flex items-center justify-center font-bold text-xs font-mono">
+                  <div className="w-auto h-8 rounded-xl bg-amber-100/70 text-amber-800 flex items-center justify-center font-bold text-xs font-mono">
                     #{tag.id.replace('TAG', '') || '01'}
                   </div>
                   <div>
@@ -436,13 +436,6 @@ export function TableHubPortal({ tag, reviewUrl }: TableHubPortalProps) {
                   <span>•</span>
                   <span>{tag.id}</span>
                 </div>
-                <Link
-                  to={`/manage/${tag.id}`}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 text-[11px] font-semibold transition-colors"
-                >
-                  <Settings2 className="w-3.5 h-3.5 text-slate-500" />
-                  <span>Kelola Stand Meja Ini</span>
-                </Link>
               </footer>
             </div>
           </section>

@@ -180,7 +180,8 @@ CREATE OR REPLACE FUNCTION update_tag_config(
     p_tag_id VARCHAR(32),
     p_pin VARCHAR(32),
     p_hub_config JSONB,
-    p_type product_type DEFAULT NULL
+    p_type product_type DEFAULT NULL,
+    p_business_name VARCHAR(255) DEFAULT NULL
 )
 RETURNS BOOLEAN AS $$
 DECLARE
@@ -195,6 +196,7 @@ BEGIN
     UPDATE public.nfc_tags
     SET hub_config = p_hub_config,
         type = COALESCE(p_type, type),
+        business_name = COALESCE(p_business_name, business_name),
         updated_at = NOW()
     WHERE id = p_tag_id;
 

@@ -278,6 +278,7 @@ export default function ManageTag() {
       p_tag_id: tagId,
       p_pin: pin,
       p_type: productType,
+      p_business_name: businessName.trim(),
       p_hub_config: {
         tagline,
         bio,
@@ -485,6 +486,23 @@ export default function ManageTag() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                {/* Nama Bisnis / Resto */}
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                    <Store className="h-3.5 w-3.5 text-slate-500" /> Nama Bisnis / Restoran / Kafe
+                  </label>
+                  <Input
+                    value={businessName}
+                    onChange={(e) => setBusinessName(e.target.value)}
+                    placeholder="Contoh: Kopi Kenangan, Barlow & Fields, Resto Sedap"
+                    className="h-10 text-xs font-bold rounded-xl border-slate-200 bg-white"
+                    required
+                  />
+                  <span className="text-[10px] text-slate-400 block">
+                    Nama ini tampil sebagai identitas utama di portal meja tamu dan dashboard.
+                  </span>
+                </div>
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {/* Foto Profil / Logo Toko */}
                   <div className="space-y-2 p-3 rounded-2xl border border-slate-200/80 bg-slate-50/50">
