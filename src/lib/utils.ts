@@ -67,7 +67,7 @@ export function parseMapsUrl(input: string): { name: string; address: string; ra
   let directReviewUrl = cleanUrl;
 
   try {
-    // Cek apakah URL mengandung pola hex Google Maps: 0x...:0x... (baik di URL Maps maupun #lrd)
+    // Cek apakah URL mengandung pola hex Google Maps: 0x...:0x... (baik di URL Maps, ftid, maupun #lrd)
     const hexMatch = cleanUrl.match(/(0x[0-9a-fA-F]+):(0x[0-9a-fA-F]+)/);
     if (hexMatch && hexMatch[1] && hexMatch[2]) {
       const computedPlaceId = convertHexToPlaceId(hexMatch[1], hexMatch[2]);
@@ -94,16 +94,17 @@ export function parseMapsUrl(input: string): { name: string; address: string; ra
 
     const url = new URL(cleanUrl);
 
-    const daddr = url.searchParams.get('daddr');
-    if (daddr) {
-      const decoded = decodeURIComponent(daddr).replace(/\+/g, ' ');
+    // Ambil nama dari parameter q / query (misal maps.google.com?q=Nama+Toko&ftid=...)
+    const q = url.searchParams.get('q') || url.searchParams.get('query');
+    if (q) {
+      const decoded = decodeURIComponent(q).replace(/\+/g, ' ');
       address = decoded;
       name = decoded.split(',')[0].trim();
     }
 
-    const q = url.searchParams.get('q') || url.searchParams.get('query');
-    if (q && !name) {
-      const decoded = decodeURIComponent(q).replace(/\+/g, ' ');
+    const daddr = url.searchParams.get('daddr');
+    if (daddr && !name) {
+      const decoded = decodeURIComponent(daddr).replace(/\+/g, ' ');
       address = decoded;
       name = decoded.split(',')[0].trim();
     }
@@ -129,5 +130,22 @@ export function parseMapsUrl(input: string): { name: string; address: string; ra
     address: address || 'Lokasi terverifikasi via Google Maps',
     rawUrl: directReviewUrl
   };
+}
+
+// Unshorten link maps.app.goo.gl via fetch redirect jika memungkinkan
+export async function expandShortMapsUrl(shortUrl: string): Promise<string | null> {
+  try {
+    // Memanfaatkan proxy redirect gratis unshorten
+    const res = await fetch(`https://corsproxy.io/?url=${encodeURIComponent(shortUrl)}`, {
+      method: 'HEAD',
+      redirect: 'follow'
+    });
+    if (res.url && res.url !== shortUrl && res.url.includes('google')) {
+      return res.url;
+    }
+  } catch {
+    // Fallback jika proxy offline
+  }
+  return null;
 }
 
