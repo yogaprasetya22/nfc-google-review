@@ -7,15 +7,25 @@ export function cn(...inputs: ClassValue[]) {
 
 // Ekstrak nama dan alamat dari URL Google Maps
 export function parseMapsUrl(input: string): { name: string; address: string; rawUrl: string } | null {
-  if (!input.includes('http://') && !input.includes('https://') && !input.includes('google.com/maps')) {
+  const trimmed = input.trim();
+  const isMapsUrl = 
+    trimmed.includes('google.com/maps') || 
+    trimmed.includes('maps.app.goo.gl') || 
+    trimmed.includes('goo.gl/maps') ||
+    trimmed.includes('maps.google.');
+
+  if (!isMapsUrl) {
     return null;
   }
+
+  // Bersihkan karakter aneh di ujung (misal tanda titik ".")
+  const cleanUrl = trimmed.replace(/[.,;!?]+$/, '');
 
   let address = '';
   let name = '';
 
   try {
-    const url = new URL(input);
+    const url = new URL(cleanUrl);
 
     const daddr = url.searchParams.get('daddr');
     if (daddr) {
@@ -50,7 +60,7 @@ export function parseMapsUrl(input: string): { name: string; address: string; ra
   return {
     name: name || 'Profil Google Bisnis',
     address: address || 'Lokasi terverifikasi via Google Maps',
-    rawUrl: input.trim()
+    rawUrl: cleanUrl
   };
 }
 
