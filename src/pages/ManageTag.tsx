@@ -38,7 +38,7 @@ import { LinkCardsEditor } from '@/components/hub/LinkCardsEditor';
 import { MobilePreview } from '@/components/hub/MobilePreview';
 import type { FeedbackItem } from '@/types/nfc';
 import { compressImageToKB } from '@/lib/imageCompressor';
-import { parseMapsUrl } from '@/lib/utils';
+import { parseMapsUrl, resolveMapsUrlAsync } from '@/lib/utils';
 
 export default function ManageTag() {
   const { tagId } = useParams<{ tagId: string }>();
@@ -324,13 +324,23 @@ export default function ManageTag() {
     let updatedCustomLinks = [...customLinks];
 
     if (productType === 'DIRECT_REVIEW') {
-      const parsed = parseMapsUrl(directReviewUrl);
-      effectivePlaceId = parsed?.rawUrl ? (parsed.rawUrl.startsWith('http') ? `URL:${parsed.rawUrl}` : parsed.rawUrl) : (directReviewUrl ? `URL:${directReviewUrl}` : null);
+      let finalReviewUrl = directReviewUrl.trim();
+      const parsed = parseMapsUrl(finalReviewUrl);
+      if (parsed?.rawUrl && parsed.rawUrl.includes('writereview')) {
+        finalReviewUrl = parsed.rawUrl;
+      } else if (finalReviewUrl.includes('maps.app.goo.gl') || finalReviewUrl.includes('goo.gl/maps')) {
+        const resolved = await resolveMapsUrlAsync(finalReviewUrl);
+        if (resolved?.rawUrl && resolved.rawUrl.includes('writereview')) {
+          finalReviewUrl = resolved.rawUrl;
+        }
+      }
+
+      effectivePlaceId = finalReviewUrl.startsWith('http') ? `URL:${finalReviewUrl}` : finalReviewUrl;
       
       // Update juga di custom_links kartu review jika ada
       const reviewIdx = updatedCustomLinks.findIndex(l => l.icon === 'google');
-      if (reviewIdx !== -1 && directReviewUrl) {
-        updatedCustomLinks[reviewIdx] = { ...updatedCustomLinks[reviewIdx], url: parsed?.rawUrl || directReviewUrl };
+      if (reviewIdx !== -1 && finalReviewUrl) {
+        updatedCustomLinks[reviewIdx] = { ...updatedCustomLinks[reviewIdx], url: finalReviewUrl };
       }
     }
 
@@ -585,19 +595,31 @@ export default function ManageTag() {
 
                     <Input
                       value={directReviewUrl}
-                      onChange={(e) => {
+                      onChange={async (e) => {
                         const val = e.target.value;
+                        setDirectReviewUrl(val);
+
+                        // Coba parsing sinkron dulu (untuk link panjang)
                         const parsed = parseMapsUrl(val);
-                        if (parsed) {
+                        if (parsed?.rawUrl && parsed.rawUrl.includes('writereview')) {
                           if (parsed.name && !businessName) {
                             setBusinessName(parsed.name);
                           }
                           setDirectReviewUrl(parsed.rawUrl);
-                          if (parsed.rawUrl.includes('writereview')) {
-                            toast.success('Otomatis diubah menjadi link langsung ke form ulasan bintang 5!');
+                          toast.success('Otomatis diubah menjadi link langsung ke form ulasan bintang 5!');
+                          return;
+                        }
+
+                        // Jika link pendek maps.app.goo.gl, resolve secara asinkron
+                        if (val.includes('maps.app.goo.gl') || val.includes('goo.gl/maps')) {
+                          const resolved = await resolveMapsUrlAsync(val);
+                          if (resolved?.rawUrl && resolved.rawUrl.includes('writereview')) {
+                            if (resolved.name && !businessName) {
+                              setBusinessName(resolved.name);
+                            }
+                            setDirectReviewUrl(resolved.rawUrl);
+                            toast.success('Link pendek berhasil dikonversi ke form ulasan bintang 5!');
                           }
-                        } else {
-                          setDirectReviewUrl(val);
                         }
                       }}
                       placeholder="Paste link Google Maps di sini (https://maps.app.goo.gl/... atau https://google.com/maps/...)"

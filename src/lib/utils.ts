@@ -132,20 +132,36 @@ export function parseMapsUrl(input: string): { name: string; address: string; ra
   };
 }
 
-// Unshorten link maps.app.goo.gl via fetch redirect jika memungkinkan
-export async function expandShortMapsUrl(shortUrl: string): Promise<string | null> {
-  try {
-    // Memanfaatkan proxy redirect gratis unshorten
-    const res = await fetch(`https://corsproxy.io/?url=${encodeURIComponent(shortUrl)}`, {
-      method: 'HEAD',
-      redirect: 'follow'
-    });
-    if (res.url && res.url !== shortUrl && res.url.includes('google')) {
-      return res.url;
-    }
-  } catch {
-    // Fallback jika proxy offline
+// Unshorten link maps.app.goo.gl via unshorten API dan ekstrak writereview URL
+export async function resolveMapsUrlAsync(inputUrl: string): Promise<{ name: string; rawUrl: string } | null> {
+  const trimmed = inputUrl.trim().replace(/[.,;!?]+$/, '');
+
+  // 1. Jika sudah mengandung format hex atau writereview langsung
+  const syncParsed = parseMapsUrl(trimmed);
+  if (syncParsed?.rawUrl && syncParsed.rawUrl.includes('writereview')) {
+    return { name: syncParsed.name, rawUrl: syncParsed.rawUrl };
   }
-  return null;
+
+  // 2. Jika link pendek maps.app.goo.gl atau goo.gl/maps
+  if (trimmed.includes('maps.app.goo.gl') || trimmed.includes('goo.gl/maps')) {
+    try {
+      const res = await fetch(`https://unshorten.me/json/${encodeURIComponent(trimmed)}`);
+      if (res.ok) {
+        const data = await res.json();
+        const resolved = data.resolved_url || '';
+        if (resolved) {
+          const decodedResolved = decodeURIComponent(resolved);
+          const parsed = parseMapsUrl(decodedResolved);
+          if (parsed?.rawUrl && parsed.rawUrl.includes('writereview')) {
+            return { name: parsed.name, rawUrl: parsed.rawUrl };
+          }
+        }
+      }
+    } catch {
+      // Abaikan jika offline / rate limited
+    }
+  }
+
+  return syncParsed ? { name: syncParsed.name, rawUrl: syncParsed.rawUrl } : null;
 }
 
