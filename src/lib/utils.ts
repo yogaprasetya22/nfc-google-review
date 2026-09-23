@@ -5,6 +5,45 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+// Konversi CID / Data Hex Google Maps ke Place ID (ChIJ...)
+export function convertHexToPlaceId(hex1Str: string, hex2Str: string): string | null {
+  try {
+    const h1 = BigInt(hex1Str);
+    const h2 = BigInt(hex2Str);
+
+    const buf = new Uint8Array(21);
+    buf[0] = 0x0a; // protobuf tag: string field 1
+    buf[1] = 0x12; // length: 18 bytes
+    buf[2] = 0x09; // tag 1: fixed64
+
+    // pack h1 little-endian (8 bytes)
+    let temp1 = h1;
+    for (let i = 0; i < 8; i++) {
+      buf[3 + i] = Number(temp1 & 0xffn);
+      temp1 >>= 8n;
+    }
+
+    buf[11] = 0x11; // tag 2: fixed64
+
+    // pack h2 little-endian (8 bytes)
+    let temp2 = h2;
+    for (let i = 0; i < 8; i++) {
+      buf[12 + i] = Number(temp2 & 0xffn);
+      temp2 >>= 8n;
+    }
+
+    // binary string to base64url
+    let binary = '';
+    for (let i = 0; i < 20; i++) {
+      binary += String.fromCharCode(buf[i]);
+    }
+    const b64 = btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    return b64;
+  } catch {
+    return null;
+  }
+}
+
 // Ekstrak nama dan alamat dari URL Google Maps / Google Review
 export function parseMapsUrl(input: string): { name: string; address: string; rawUrl: string } | null {
   const trimmed = input.trim();
@@ -25,8 +64,18 @@ export function parseMapsUrl(input: string): { name: string; address: string; ra
 
   let address = '';
   let name = '';
+  let directReviewUrl = cleanUrl;
 
   try {
+    // Cek apakah URL mengandung pola hex Google Maps: 0x...:0x... (baik di URL Maps maupun #lrd)
+    const hexMatch = cleanUrl.match(/(0x[0-9a-fA-F]+):(0x[0-9a-fA-F]+)/);
+    if (hexMatch && hexMatch[1] && hexMatch[2]) {
+      const computedPlaceId = convertHexToPlaceId(hexMatch[1], hexMatch[2]);
+      if (computedPlaceId) {
+        directReviewUrl = `https://search.google.com/local/writereview?placeid=${computedPlaceId}`;
+      }
+    }
+
     // Untuk google.com/search#lrd= — ambil nama dari parameter q
     if (cleanUrl.includes('google.com/search') && cleanUrl.includes('#lrd=')) {
       const url = new URL(cleanUrl);
@@ -34,12 +83,12 @@ export function parseMapsUrl(input: string): { name: string; address: string; ra
       if (q) {
         const decoded = decodeURIComponent(q).replace(/\+/g, ' ');
         name = decoded.split(',')[0].trim();
-        address = `Google Review - ${name}`;
+        address = `Buka form review - ${name}`;
       }
       return {
         name: name || 'Google Review',
-        address: address || 'Link review langsung dari Google',
-        rawUrl: cleanUrl
+        address: address || 'Langsung ke form tulis review',
+        rawUrl: directReviewUrl
       };
     }
 
@@ -78,7 +127,7 @@ export function parseMapsUrl(input: string): { name: string; address: string; ra
   return {
     name: name || 'Profil Google Bisnis',
     address: address || 'Lokasi terverifikasi via Google Maps',
-    rawUrl: cleanUrl
+    rawUrl: directReviewUrl
   };
 }
 
