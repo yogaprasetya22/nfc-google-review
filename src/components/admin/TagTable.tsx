@@ -3,7 +3,7 @@ import type { NfcTagEntity } from '@/types/nfc';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ExternalLink, Trash2, Edit2, Check, X, Loader2 } from 'lucide-react';
+import { ExternalLink, Trash2, Edit2, Check, X, Loader2, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
@@ -11,9 +11,10 @@ interface TagTableProps {
   tags: NfcTagEntity[];
   onUpdateTagId: (oldId: string, newId: string) => Promise<boolean>;
   onDeleteTag: (tagId: string) => Promise<boolean>;
+  onDesignTag?: (tag: NfcTagEntity) => void;
 }
 
-export function TagTable({ tags, onUpdateTagId, onDeleteTag }: TagTableProps) {
+export function TagTable({ tags, onUpdateTagId, onDeleteTag, onDesignTag }: TagTableProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [newIdVal, setNewIdVal] = useState<string>('');
   const [savingId, setSavingId] = useState<boolean>(false);
@@ -148,6 +149,18 @@ export function TagTable({ tags, onUpdateTagId, onDeleteTag }: TagTableProps) {
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end gap-1.5">
+                    {onDesignTag && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => onDesignTag(item)}
+                        className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 h-7 rounded-lg border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 hover:text-blue-800 transition-colors shadow-2xs"
+                        title="Buka Canvas Studio Desain & Cetak Barcode/NFC"
+                      >
+                        <Sparkles className="h-3.5 w-3.5 text-blue-600" />
+                        Desain / Cetak
+                      </Button>
+                    )}
                     <a
                       href={`/manage/${item.id}`}
                       target="_blank"

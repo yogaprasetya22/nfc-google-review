@@ -5,11 +5,13 @@ import type { NfcTagEntity } from '@/types/nfc';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, RefreshCw, Lock, LogOut, User, KeyRound } from 'lucide-react';
+import { Plus, RefreshCw, Lock, LogOut, User, KeyRound, LayoutGrid, ListFilter } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { MetricCards } from '@/components/admin/MetricCards';
 import { TagTable } from '@/components/admin/TagTable';
+import { TagDesignStudio } from '@/components/admin/TagDesignStudio';
+import { TagCardPreview } from '@/components/admin/TagCardPreview';
 
 export default function AdminDashboard() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
@@ -22,6 +24,8 @@ export default function AdminDashboard() {
   const [totalTaps, setTotalTaps] = useState<number>(0);
   const [newTagId, setNewTagId] = useState('');
   const [loading, setLoading] = useState(false);
+  const [designingTag, setDesigningTag] = useState<NfcTagEntity | null>(null);
+  const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -248,12 +252,83 @@ export default function AdminDashboard() {
         </CardContent>
       </Card>
 
-      {/* Tabel Inventaris */}
-      <TagTable
-        tags={tags}
-        onUpdateTagId={handleUpdateTagId}
-        onDeleteTag={handleDeleteTag}
-      />
+      {/* Section Header & Toggle View: Card vs Tabel */}
+      <div className="flex items-center justify-between pt-2">
+        <div>
+          <h2 className="text-base font-bold text-slate-900 tracking-tight flex items-center gap-2">
+            Inventaris Unit NFC ({tags.length})
+          </h2>
+          <p className="text-xs text-slate-500">
+            {viewMode === 'cards'
+              ? 'Tampilan Visual Kartu Standee & Stiker Google Review'
+              : 'Tampilan Detail Tabel Baris'}
+          </p>
+        </div>
+
+        <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
+          <button
+            onClick={() => setViewMode('cards')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+              viewMode === 'cards'
+                ? 'bg-white text-slate-900 shadow-xs'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <LayoutGrid className="h-3.5 w-3.5" />
+            Visual Kartu
+          </button>
+          <button
+            onClick={() => setViewMode('table')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+              viewMode === 'table'
+                ? 'bg-white text-slate-900 shadow-xs'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <ListFilter className="h-3.5 w-3.5" />
+            Tabel
+          </button>
+        </div>
+      </div>
+
+      {/* Konten Inventaris: Tampilan Visual Card atau Tabel */}
+      {viewMode === 'cards' ? (
+        tags.length === 0 ? (
+          <div className="text-center py-12 bg-white rounded-3xl border border-dashed border-slate-300 p-6">
+            <p className="text-xs text-slate-400">Belum ada tag yang terdaftar. Buat tag ID baru di atas.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {tags.map((tagItem) => (
+              <TagCardPreview
+                key={tagItem.id}
+                tag={tagItem}
+                onDesignTag={(item) => setDesigningTag(item)}
+                onDeleteTag={handleDeleteTag}
+              />
+            ))}
+          </div>
+        )
+      ) : (
+        <TagTable
+          tags={tags}
+          onUpdateTagId={handleUpdateTagId}
+          onDeleteTag={handleDeleteTag}
+          onDesignTag={(item) => setDesigningTag(item)}
+        />
+      )}
+
+      {/* Canva-style Studio Designer Modal */}
+      {designingTag && (
+        <TagDesignStudio
+          tag={designingTag}
+          onClose={() => setDesigningTag(null)}
+          onTagUpdated={(updatedTag) => {
+            setTags((prev) => prev.map((t) => (t.id === updatedTag.id ? updatedTag : t)));
+            setDesigningTag(updatedTag);
+          }}
+        />
+      )}
     </div>
   );
 }

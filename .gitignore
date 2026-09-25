@@ -23,6 +23,10 @@ dist-ssr
 .env.test.local
 .env.production.local
 !.env.example
+*.json
+!package*.json
+!tsconfig*.json
+
 
 # Bun
 bun.lockb

@@ -54,6 +54,20 @@ export interface HubConfiguration {
   whatsapp?: string;
   custom_links?: CustomLink[];
   feedbacks?: FeedbackItem[];
+  card_design?: {
+    front?: {
+      template?: string;
+      elements: any[];
+      bgImage?: string | null;
+    };
+    back?: {
+      template?: string;
+      elements: any[];
+      bgImage?: string | null;
+    };
+    preset?: string;
+    updated_at?: string;
+  };
 }
 
 
