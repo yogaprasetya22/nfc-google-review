@@ -30,23 +30,59 @@ import {
   ShieldCheck,
   User,
   MapPin,
-  Sparkles
+  Sparkles,
+  LogOut
 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { LinkCardsEditor } from '@/components/hub/LinkCardsEditor';
 import { MobilePreview } from '@/components/hub/MobilePreview';
 import type { FeedbackItem } from '@/types/nfc';
+import { GoogleReviewUrlInput } from '@/components/common/GoogleReviewUrlInput';
 import { compressImageToKB } from '@/lib/imageCompressor';
 import { uploadToGoogleDrive } from '@/lib/gdrive';
 import { parseMapsUrl, resolveMapsUrlAsync } from '@/lib/utils';
+
+// Durasi sesi login CMS Merchant Meja: 30 hari (dalam milidetik)
+const TAG_SESSION_PREFIX = 'tag_cms_session_';
+const TAG_SESSION_DURATION_MS = 30 * 24 * 60 * 60 * 1000;
 
 export default function ManageTag() {
   const { tagId } = useParams<{ tagId: string }>();
   const navigate = useNavigate();
 
-  const [pin, setPin] = useState('');
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [pin, setPin] = useState(() => {
+    if (!tagId) return '';
+    try {
+      const stored = localStorage.getItem(`${TAG_SESSION_PREFIX}${tagId}`);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed?.savedPin && typeof parsed.savedPin === 'string') {
+          return parsed.savedPin;
+        }
+      }
+    } catch {}
+    return '';
+  });
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
+    if (!tagId) return false;
+    try {
+      const stored = localStorage.getItem(`${TAG_SESSION_PREFIX}${tagId}`);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed?.authenticated && typeof parsed?.expiresAt === 'number') {
+          if (Date.now() < parsed.expiresAt) {
+            return true;
+          } else {
+            localStorage.removeItem(`${TAG_SESSION_PREFIX}${tagId}`);
+          }
+        }
+      }
+    } catch {
+      // Abaikan error parse
+    }
+    return false;
+  });
   const [submitting, setSubmitting] = useState(false);
   const [mobileTab, setMobileTab] = useState<'editor' | 'preview'>('editor');
 
@@ -78,41 +114,17 @@ export default function ManageTag() {
   const [customLinks, setCustomLinks] = useState<CustomLink[]>([]);
   const [feedbacks, setFeedbacks] = useState<FeedbackItem[]>([]);
 
-
-
-  async function handleVerify(e: React.FormEvent) {
-    e.preventDefault();
-    setSubmitting(true);
-
-    const { data: isValid, error: rpcError } = await supabase.rpc('verify_tag_pin', {
-      p_tag_id: tagId,
-      p_pin: pin
-    });
-
-    if (rpcError || !isValid) {
-      setSubmitting(false);
-      toast.error(rpcError ? `Error: ${rpcError.message}` : 'PIN salah. Silakan coba lagi.');
-      return;
+  // Populasi data jika sudah terotentikasi via session tersimpan
+  React.useEffect(() => {
+    if (isAuthenticated && tagId) {
+      loadTagData(tagId);
     }
+  }, [isAuthenticated, tagId]);
 
-    const { data, error } = await supabase
-      .from('nfc_tags')
-      .select('id, type, business_name, google_place_id, is_active, total_taps, hub_config, created_at, updated_at')
-      .eq('id', tagId)
-      .single();
-
-    setSubmitting(false);
-
-    if (error || !data) {
-      toast.error('Gagal mengambil data tag: ' + (error?.message || 'Data kosong'));
-      return;
-    }
-
-    const current = data as NfcTagEntity;
+  function populateFromTag(current: NfcTagEntity) {
     setProductType(current.type || 'TABLE_HUB');
     setBusinessName(current.business_name || '');
 
-    // Inisialisasi link review langsung
     const initialDirectUrl = current.google_place_id
       ? (current.google_place_id.startsWith('URL:') ? current.google_place_id.replace('URL:', '') : `https://search.google.com/local/writereview?placeid=${current.google_place_id}`)
       : (current.hub_config?.custom_links?.find(l => l.icon === 'google')?.url || '');
@@ -143,11 +155,73 @@ export default function ManageTag() {
         { id: '4', title: 'Leave Anonymous Feedback', url: '#feedback', icon: 'feedback', highlight: false },
         { id: '5', title: 'Play UNO No Mercy', url: 'https://unonomercy.in/', icon: 'game', highlight: false }
       ]);
+    }
+  }
 
+  async function loadTagData(id: string) {
+    const { data, error } = await supabase
+      .from('nfc_tags')
+      .select('id, type, business_name, google_place_id, is_active, total_taps, hub_config, created_at, updated_at')
+      .eq('id', id)
+      .single();
+
+    if (!error && data) {
+      populateFromTag(data as NfcTagEntity);
+    }
+  }
+
+  async function handleVerify(e: React.FormEvent) {
+    e.preventDefault();
+    setSubmitting(true);
+
+    const { data: isValid, error: rpcError } = await supabase.rpc('verify_tag_pin', {
+      p_tag_id: tagId,
+      p_pin: pin
+    });
+
+    if (rpcError || !isValid) {
+      setSubmitting(false);
+      toast.error(rpcError ? `Error: ${rpcError.message}` : 'PIN salah. Silakan coba lagi.');
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from('nfc_tags')
+      .select('id, type, business_name, google_place_id, is_active, total_taps, hub_config, created_at, updated_at')
+      .eq('id', tagId)
+      .single();
+
+    setSubmitting(false);
+
+    if (error || !data) {
+      toast.error('Gagal mengambil data tag: ' + (error?.message || 'Data kosong'));
+      return;
+    }
+
+    populateFromTag(data as NfcTagEntity);
+
+    // Simpan sesi login CMS Meja selama 30 hari di localStorage
+    if (tagId) {
+      const expiresAt = Date.now() + TAG_SESSION_DURATION_MS;
+      localStorage.setItem(`${TAG_SESSION_PREFIX}${tagId}`, JSON.stringify({
+        authenticated: true,
+        expiresAt,
+        tagId,
+        savedPin: pin
+      }));
     }
 
     setIsAuthenticated(true);
-    toast.success('Login CMS berhasil!');
+    toast.success('Login CMS berhasil! Sesi aktif selama 1 bulan.');
+  }
+
+  function handleLogoutCMS() {
+    if (tagId) {
+      localStorage.removeItem(`${TAG_SESSION_PREFIX}${tagId}`);
+    }
+    setIsAuthenticated(false);
+    setPin('');
+    toast.info('Berhasil keluar dari CMS Meja.');
   }
 
   // Realtime listener untuk CMS Admin agar masukan/chat meja masuk seketika
@@ -323,7 +397,9 @@ export default function ManageTag() {
         }
       }
 
-      effectivePlaceId = finalReviewUrl.startsWith('http') ? `URL:${finalReviewUrl}` : finalReviewUrl;
+      // ponytail: store bare ChIJ Place ID when extractable — cleaner than URL: prefix roundtrip
+      const resolvedParsed = parseMapsUrl(finalReviewUrl);
+      effectivePlaceId = resolvedParsed?.placeId || (finalReviewUrl.startsWith('http') ? `URL:${finalReviewUrl}` : finalReviewUrl);
       
       // Update juga di custom_links kartu review jika ada
       const reviewIdx = updatedCustomLinks.findIndex(l => l.icon === 'google');
@@ -332,10 +408,49 @@ export default function ManageTag() {
       }
     }
 
+    // Ambil PIN dari state atau dari session tersimpan
+    let activePin = pin;
+    if (!activePin && tagId) {
+      try {
+        const stored = localStorage.getItem(`${TAG_SESSION_PREFIX}${tagId}`);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (parsed?.savedPin) {
+            activePin = parsed.savedPin;
+            setPin(parsed.savedPin);
+          }
+        }
+      } catch {}
+    }
+
+    if (!activePin) {
+      const promptedPin = window.prompt('Masukkan PIN keamanan 4-digit unit Anda untuk menyimpan:');
+      if (!promptedPin) {
+        toast.error('PIN diperlukan untuk menyimpan perubahan.');
+        return;
+      }
+      activePin = promptedPin.trim();
+      setPin(activePin);
+      // Simpan PIN ke sesi agar tidak ditanya lagi
+      if (tagId) {
+        try {
+          const stored = localStorage.getItem(`${TAG_SESSION_PREFIX}${tagId}`);
+          const parsed = stored ? JSON.parse(stored) : {};
+          localStorage.setItem(`${TAG_SESSION_PREFIX}${tagId}`, JSON.stringify({
+            ...parsed,
+            authenticated: true,
+            expiresAt: Date.now() + TAG_SESSION_DURATION_MS,
+            tagId,
+            savedPin: activePin
+          }));
+        } catch {}
+      }
+    }
+
     setSubmitting(true);
     const { data: success, error } = await supabase.rpc('update_tag_config', {
       p_tag_id: tagId,
-      p_pin: pin,
+      p_pin: activePin,
       p_type: productType,
       p_business_name: businessName.trim(),
       p_hub_config: {
@@ -462,6 +577,16 @@ export default function ManageTag() {
               {submitting ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <Save className="h-3.5 w-3.5 mr-1.5" />}
               <span>Simpan</span>
             </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleLogoutCMS}
+              className="h-8 sm:h-9 px-2.5 rounded-xl border-slate-200 text-slate-500 hover:text-red-600 hover:border-red-200 hover:bg-red-50 text-[11px] sm:text-xs font-semibold transition"
+              title="Keluar dari CMS Meja"
+            >
+              <LogOut className="h-3.5 w-3.5 sm:mr-1" />
+              <span className="hidden sm:inline">Keluar</span>
+            </Button>
           </div>
         </div>
 
@@ -573,71 +698,16 @@ export default function ManageTag() {
                     />
                   </div>
 
-                  {/* Input Link Google Maps */}
-                  <div className="space-y-2 p-4 rounded-2xl bg-blue-50/60 border border-blue-200/80">
-                    <div className="flex items-center justify-between">
-                      <label className="text-xs font-bold text-blue-950 flex items-center gap-1.5">
-                        <MapPin className="h-4 w-4 text-blue-600" /> Tautan / URL Google Maps
-                      </label>
-                      <span className="text-[10px] text-blue-600 font-mono">Auto-convert ke Write Review</span>
-                    </div>
-
-                    <Input
-                      value={directReviewUrl}
-                      onChange={async (e) => {
-                        const val = e.target.value;
-                        setDirectReviewUrl(val);
-
-                        // Coba parsing sinkron dulu (untuk link panjang)
-                        const parsed = parseMapsUrl(val);
-                        if (parsed?.rawUrl && parsed.rawUrl.includes('writereview')) {
-                          if (parsed.name && !businessName) {
-                            setBusinessName(parsed.name);
-                          }
-                          setDirectReviewUrl(parsed.rawUrl);
-                          toast.success('Otomatis diubah menjadi link langsung ke form ulasan bintang 5!');
-                          return;
-                        }
-
-                        // Jika link pendek maps.app.goo.gl, resolve secara asinkron
-                        if (val.includes('maps.app.goo.gl') || val.includes('goo.gl/maps')) {
-                          const resolved = await resolveMapsUrlAsync(val);
-                          if (resolved?.rawUrl && resolved.rawUrl.includes('writereview')) {
-                            if (resolved.name && !businessName) {
-                              setBusinessName(resolved.name);
-                            }
-                            setDirectReviewUrl(resolved.rawUrl);
-                            toast.success('Link pendek berhasil dikonversi ke form ulasan bintang 5!');
-                          }
-                        }
-                      }}
-                      placeholder="Paste link Google Maps di sini (https://maps.app.goo.gl/... atau https://google.com/maps/...)"
-                      className="h-10 text-xs rounded-xl border-blue-200 bg-white font-mono"
-                    />
-
-                    <div className="flex items-start gap-2 pt-1 text-[11px] text-blue-900/80 leading-relaxed">
-                      <Sparkles className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
-                      <span>
-                        Paste link Google Maps apa saja. Sistem akan <strong>otomatis mengonversinya</strong> menjadi form pop-up bintang 5 (Write Review) saat tamu tap kartu.
-                      </span>
-                    </div>
-
-                    {directReviewUrl && (
-                      <div className="pt-2 flex items-center justify-between border-t border-blue-200/60">
-                        <span className="text-[10px] font-mono text-slate-500 truncate max-w-[260px]">
-                          Target: {directReviewUrl}
-                        </span>
-                        <a
-                          href={directReviewUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-700 hover:text-blue-900 underline"
-                        >
-                          <ExternalLink className="h-3 w-3" /> Tes Buka Link
-                        </a>
-                      </div>
-                    )}
-                  </div>
+                  {/* Input Link Google Maps Reusable Component */}
+                  <GoogleReviewUrlInput
+                    value={directReviewUrl}
+                    onChange={(newUrl: string, detectedName?: string) => {
+                      setDirectReviewUrl(newUrl);
+                      if (detectedName && !businessName) {
+                        setBusinessName(detectedName);
+                      }
+                    }}
+                  />
                 </CardContent>
               </Card>
             ) : (

@@ -12,9 +12,10 @@ interface TagTableProps {
   onUpdateTagId: (oldId: string, newId: string) => Promise<boolean>;
   onDeleteTag: (tagId: string) => Promise<boolean>;
   onDesignTag?: (tag: NfcTagEntity) => void;
+  onEditTag?: (tag: NfcTagEntity) => void;
 }
 
-export function TagTable({ tags, onUpdateTagId, onDeleteTag, onDesignTag }: TagTableProps) {
+export function TagTable({ tags, onUpdateTagId, onDeleteTag, onDesignTag, onEditTag }: TagTableProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [newIdVal, setNewIdVal] = useState<string>('');
   const [savingId, setSavingId] = useState<boolean>(false);
@@ -159,6 +160,18 @@ export function TagTable({ tags, onUpdateTagId, onDeleteTag, onDesignTag }: TagT
                       >
                         <Sparkles className="h-3.5 w-3.5 text-blue-600" />
                         Desain / Cetak
+                      </Button>
+                    )}
+                    {onEditTag && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => onEditTag(item)}
+                        className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 h-7 rounded-lg text-slate-600 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                        title="Edit Detail Tag (ID, Tipe, Bisnis, PIN, Tap)"
+                      >
+                        <Edit2 className="h-3.5 w-3.5" />
+                        Edit
                       </Button>
                     )}
                     <a

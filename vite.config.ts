@@ -61,6 +61,17 @@ export default defineConfig({
             return;
           }
 
+          if (req.url?.startsWith('/api/places/search') && req.method === 'GET') {
+            try {
+              const handlerModule: any = await import('./api/places/search.js' as any);
+              await handlerModule.default(req, customRes);
+            } catch (err: any) {
+              console.error('Local /api/places/search error:', err);
+              customRes.status(500).json({ success: false, error: err.message });
+            }
+            return;
+          }
+
           if (req.url?.startsWith('/api/gdrive-delete') && (req.method === 'DELETE' || req.method === 'POST')) {
             try {
               const handlerModule: any = await import('./api/gdrive-delete.js' as any);

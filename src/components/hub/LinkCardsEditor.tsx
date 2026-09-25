@@ -4,7 +4,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Plus, Trash2, Sparkles, MapPin, Search, Loader2, CheckCircle2, Navigation, FileText, Upload, Link as LinkIcon, FileCheck, ExternalLink } from 'lucide-react';
-import { parseMapsUrl, resolveMapsUrlAsync } from '@/lib/utils';
+import { parseMapsUrl, resolveMapsUrlAsync, fetchPlaceIdByQuery } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { uploadToGoogleDrive } from '@/lib/gdrive';
@@ -96,9 +96,9 @@ export function LinkCardsEditor({
     const timer = setTimeout(async () => {
       setIsSearching(true);
       try {
-        // ponytail: Photon (Komoot) jauh lebih akurat untuk nama bisnis/POI daripada Nominatim
-        // Bias lokasi Indonesia (Jakarta) agar hasil lebih relevan
-        const [photonRes, nominatimRes] = await Promise.allSettled([
+        // Coba cari Place ID resmi Google via server resolver (/api/places/search), Photon, dan Nominatim
+        const [placeIdRes, photonRes, nominatimRes] = await Promise.allSettled([
+          fetchPlaceIdByQuery(raw),
           fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(raw)}&limit=8&lat=-6.2&lon=106.8`),
           fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(raw)}&addressdetails=1&limit=3&countrycodes=id`, {
             headers: { 'Accept-Language': 'id', 'User-Agent': 'NFC-Review-SmartStand/1.0' }
@@ -107,6 +107,20 @@ export function LinkCardsEditor({
 
         const results: PlaceSuggestion[] = [];
         const seenNames = new Set<string>();
+
+        // 1. Jika Google Place ID resmi berhasil ditemukan (dynamic resolve)
+        if (placeIdRes.status === 'fulfilled' && placeIdRes.value) {
+          const gPlace = placeIdRes.value;
+          results.push({
+            place_id: gPlace.placeId,
+            name: gPlace.name,
+            address: gPlace.address || `Form Ulasan Bintang 5 Langsung (${gPlace.placeId})`,
+            category: 'Google Review Bintang 5',
+            source: 'url',
+            direct_url: `https://search.google.com/local/writereview?placeid=${gPlace.placeId}`
+          });
+          seenNames.add(gPlace.name.toLowerCase());
+        }
 
         // Parse Photon results (biasanya lebih akurat untuk nama bisnis)
         if (photonRes.status === 'fulfilled') {
@@ -159,7 +173,8 @@ export function LinkCardsEditor({
           }
         }
 
-        setSuggestions([directGoogleOption, ...results]);
+        // Jika ada hasil direct Google Review, letakkan paling atas menggantikan / mendahului search fallback
+        setSuggestions(results.length > 0 && results[0].source === 'url' ? [...results, directGoogleOption] : [directGoogleOption, ...results]);
       } catch {
         // Gunakan directGoogleOption saja
       } finally {
@@ -171,15 +186,34 @@ export function LinkCardsEditor({
   }, [searchQuery]);
 
   const handleSelectPlace = (idx: number, place: PlaceSuggestion) => {
-    const directUrl = place.direct_url
-      ? place.direct_url
-      : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place.name)}`;
-    
-    onLinkChange(idx, 'url', directUrl);
+    if (place.direct_url && place.direct_url.includes('writereview')) {
+      onLinkChange(idx, 'url', place.direct_url);
+      setActiveSearchIdx(null);
+      setSearchQuery('');
+      setSuggestions([]);
+      toast.success(`Lokasi "${place.name}" berhasil dihubungkan ke form Write Review!`);
+      return;
+    }
+
+    // Coba resolve ke Place ID resmi jika belum berupa writereview
+    fetchPlaceIdByQuery(place.name).then((resolved) => {
+      if (resolved?.placeId) {
+        const directReviewUrl = `https://search.google.com/local/writereview?placeid=${resolved.placeId}`;
+        onLinkChange(idx, 'url', directReviewUrl);
+        toast.success(`Lokasi "${place.name}" berhasil dihubungkan ke form Write Review!`);
+      } else {
+        const directUrl = place.direct_url || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place.name)}`;
+        onLinkChange(idx, 'url', directUrl);
+        toast.success(`Lokasi "${place.name}" terhubung!`);
+      }
+    }).catch(() => {
+      const directUrl = place.direct_url || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place.name)}`;
+      onLinkChange(idx, 'url', directUrl);
+    });
+
     setActiveSearchIdx(null);
     setSearchQuery('');
     setSuggestions([]);
-    toast.success(`Lokasi "${place.name}" berhasil dihubungkan ke Google Maps!`);
   };
 
   const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>, linkIdx: number) => {
@@ -448,26 +482,34 @@ export function LinkCardsEditor({
                 /* Jika tipe tombol adalah link URL biasa atau Google Review */
                 <>
                   <div className="flex items-center justify-between">
-                    <label className="text-[10px] font-bold text-slate-700">
+                    <label className="text-[10px] font-bold text-slate-700 flex items-center gap-1.5">
                       {link.icon === 'google' ? 'Tautan Ulasan Google Maps:' : 'Tautan / URL Tujuan:'}
                     </label>
-                    {link.icon === 'google' && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (activeSearchIdx === idx) {
-                            setActiveSearchIdx(null);
-                          } else {
-                            setActiveSearchIdx(idx);
-                            setSearchQuery('');
-                          }
-                        }}
-                        className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-600 hover:text-blue-800 cursor-pointer bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200"
-                      >
-                        <Search className="w-3 h-3" />
-                        {activeSearchIdx === idx ? 'Tutup Pencarian' : 'Cari di Google Maps'}
-                      </button>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {link.icon === 'google' && link.url && link.url.includes('writereview') && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                          Write Review Aktif
+                        </span>
+                      )}
+                      {link.icon === 'google' && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (activeSearchIdx === idx) {
+                              setActiveSearchIdx(null);
+                            } else {
+                              setActiveSearchIdx(idx);
+                              setSearchQuery('');
+                            }
+                          }}
+                          className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-600 hover:text-blue-800 cursor-pointer bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200"
+                        >
+                          <Search className="w-3 h-3" />
+                          {activeSearchIdx === idx ? 'Tutup Pencarian' : 'Cari di Google Maps'}
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   {/* Pencarian Lokasi Google Maps jika dibuka */}

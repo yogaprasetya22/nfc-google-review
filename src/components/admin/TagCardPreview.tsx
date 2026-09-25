@@ -3,7 +3,7 @@ import type { NfcTagEntity } from '@/types/nfc';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Sparkles, ExternalLink, QrCode, Radio, Star, Trash2 } from 'lucide-react';
+import { Sparkles, ExternalLink, QrCode, Radio, Star, Trash2, Edit } from 'lucide-react';
 import QRCode from 'qrcode';
 import { DEFAULT_BLANK_ELEMENTS } from './studio/starterTemplates';
 import { TemplateBackgroundRenderer } from './studio/elements/TemplateBackgroundRenderer';
@@ -12,9 +12,10 @@ interface TagCardPreviewProps {
   tag: NfcTagEntity;
   onDesignTag: (tag: NfcTagEntity) => void;
   onDeleteTag: (tagId: string) => Promise<boolean>;
+  onEditTag?: (tag: NfcTagEntity) => void;
 }
 
-export function TagCardPreview({ tag, onDesignTag, onDeleteTag }: TagCardPreviewProps) {
+export function TagCardPreview({ tag, onDesignTag, onDeleteTag, onEditTag }: TagCardPreviewProps) {
   const [qrUrl, setQrUrl] = useState<string>('');
   const tagLink = `${window.location.origin}/t/${tag.id}`;
 
@@ -323,7 +324,7 @@ export function TagCardPreview({ tag, onDesignTag, onDeleteTag }: TagCardPreview
       </div>
 
       {/* 3. Card Footer Actions: Design in Studio & Manage */}
-      <div className="p-3 bg-white mt-auto flex items-center justify-between border-t border-slate-100 gap-2">
+      <div className="p-3 bg-white mt-auto flex items-center justify-between border-t border-slate-100 gap-1.5">
         <Button
           size="sm"
           onClick={() => onDesignTag(tag)}
@@ -332,6 +333,16 @@ export function TagCardPreview({ tag, onDesignTag, onDeleteTag }: TagCardPreview
           <Sparkles className="h-3.5 w-3.5 mr-1.5 text-amber-400" />
           Edit Desain & Cetak
         </Button>
+
+        {onEditTag && (
+          <button
+            onClick={() => onEditTag(tag)}
+            className="h-8 w-8 rounded-xl border border-slate-200 flex items-center justify-center text-slate-600 hover:text-blue-600 hover:border-blue-200 hover:bg-blue-50 transition"
+            title="Edit Detail Tag (ID, Tipe, Bisnis, PIN, Tap)"
+          >
+            <Edit className="h-3.5 w-3.5" />
+          </button>
+        )}
 
         <a
           href={`/t/${tag.id}`}

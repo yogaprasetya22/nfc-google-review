@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 
 import { TableHubPortal } from '@/components/hub/TableHubPortal';
 import { TagActivationWizard, type PlaceSuggestion } from '@/components/hub/TagActivationWizard';
-import { parseMapsUrl } from '@/lib/utils';
+import { parseMapsUrl, resolveMapsUrlAsync, fetchPlaceIdByQuery } from '@/lib/utils';
 
 
 export default function PublicHandler() {
@@ -99,6 +99,26 @@ export default function PublicHandler() {
         source: 'url',
         direct_url: parsedUrl.rawUrl
       }]);
+
+      // Jika link pendek dan belum mengandung writereview, resolve secara asinkron
+      if ((raw.includes('maps.app.goo.gl') || raw.includes('goo.gl/maps')) && !parsedUrl.rawUrl.includes('writereview')) {
+        void resolveMapsUrlAsync(raw).then((resolved) => {
+          if (resolved?.rawUrl && resolved.rawUrl.includes('writereview')) {
+            setSuggestions([{
+              place_id: `URL:${resolved.rawUrl}`,
+              name: businessName || resolved.name || parsedUrl.name,
+              address: 'Form ulasan bintang 5 langsung (Write Review)',
+              category: 'Google Review Bintang 5',
+              source: 'url',
+              direct_url: resolved.rawUrl
+            }]);
+            setPlaceId(`URL:${resolved.rawUrl}`);
+            if (resolved.name && !businessName) {
+              setBusinessName(resolved.name);
+            }
+          }
+        });
+      }
       return;
     }
 
@@ -116,8 +136,8 @@ export default function PublicHandler() {
     const timer = setTimeout(async () => {
       setIsSearching(true);
       try {
-        // ponytail: Photon + Nominatim combo, Photon lebih akurat untuk nama bisnis
-        const [photonRes, nominatimRes] = await Promise.allSettled([
+        const [placeIdRes, photonRes, nominatimRes] = await Promise.allSettled([
+          fetchPlaceIdByQuery(raw),
           fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(raw)}&limit=8&lat=-6.2&lon=106.8`),
           fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(raw)}&addressdetails=1&limit=3&countrycodes=id`, {
             headers: { 'Accept-Language': 'id', 'User-Agent': 'NFC-Review-SmartStand/1.0' }
@@ -127,9 +147,23 @@ export default function PublicHandler() {
         const results: PlaceSuggestion[] = [];
         const seenNames = new Set<string>();
 
+        // Dynamic Place ID
+        if (placeIdRes.status === 'fulfilled' && placeIdRes.value) {
+          const gPlace = placeIdRes.value;
+          results.push({
+            place_id: gPlace.placeId,
+            name: businessName || gPlace.name,
+            address: gPlace.address || `Form Ulasan Bintang 5 Langsung (${gPlace.placeId})`,
+            category: 'Google Review Bintang 5',
+            source: 'url',
+            direct_url: `https://search.google.com/local/writereview?placeid=${gPlace.placeId}`
+          });
+          seenNames.add(gPlace.name.toLowerCase());
+        }
+
         if (photonRes.status === 'fulfilled') {
           const photonData = await photonRes.value.json();
-          for (const f of (photonData.features || [])) {
+          for (const f of photonData.features || []) {
             const props = f.properties || {};
             if (props.countrycode && props.countrycode !== 'ID') continue;
             const name = props.name || '';
@@ -173,7 +207,7 @@ export default function PublicHandler() {
           }
         }
 
-        setSuggestions([directGoogleOption, ...results]);
+        setSuggestions(results.length > 0 && results[0].source === 'url' ? [...results, directGoogleOption] : [directGoogleOption, ...results]);
       } catch {
         // Fallback ke directGoogleOption
       } finally {
@@ -186,11 +220,37 @@ export default function PublicHandler() {
 
   function handleSelectPlace(item: PlaceSuggestion) {
     setSelectedPlace(item);
-    setPlaceId(item.place_id);
     setSearchQuery(item.name);
     setBusinessName(item.name);
     setIsInputFocused(false);
-    toast.success(`Profil "${item.name}" terpilih!`);
+
+    if (item.place_id && item.place_id.startsWith('ChIJ')) {
+      setPlaceId(item.place_id);
+      toast.success(`Profil "${item.name}" (Write Review Aktif)!`);
+      return;
+    }
+
+    if (item.direct_url && item.direct_url.includes('writereview?placeid=')) {
+      const match = item.direct_url.match(/placeid=([a-zA-Z0-9_-]+)/);
+      if (match && match[1]) {
+        setPlaceId(match[1]);
+        toast.success(`Profil "${item.name}" (Write Review Aktif)!`);
+        return;
+      }
+    }
+
+    // Coba resolve ke ChIJ
+    fetchPlaceIdByQuery(item.name).then((res) => {
+      if (res?.placeId) {
+        setPlaceId(res.placeId);
+        toast.success(`Profil "${item.name}" (Write Review Aktif)!`);
+      } else {
+        setPlaceId(item.place_id);
+        toast.success(`Profil "${item.name}" terpilih!`);
+      }
+    }).catch(() => {
+      setPlaceId(item.place_id);
+    });
   }
 
   async function handleActivateTag(e: React.FormEvent) {

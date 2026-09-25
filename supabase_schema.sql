@@ -204,6 +204,26 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+-- E. Admin: Reset/Set PIN Baru (Tanpa Verifikasi PIN Lama)
+CREATE OR REPLACE FUNCTION admin_set_tag_pin(
+    p_tag_id VARCHAR(32),
+    p_new_pin VARCHAR(32)
+)
+RETURNS BOOLEAN AS $$
+BEGIN
+    UPDATE public.nfc_tags
+    SET pin_hash = crypt(p_new_pin, gen_salt('bf', 8)),
+        updated_at = NOW()
+    WHERE id = p_tag_id;
+
+    IF NOT FOUND THEN
+        RETURN FALSE;
+    END IF;
+
+    RETURN TRUE;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
 -- =========================================================================
 -- 6. REALTIME REPLICATION (Untuk Live Chat Meja & Admin)
 -- =========================================================================
