@@ -26,11 +26,8 @@ export default function AdminDashboard() {
     try {
       const stored = localStorage.getItem(ADMIN_SESSION_KEY);
       if (!stored) {
-        // Cek migrasi dari sessionStorage lama jika ada
+        // Cek apakah ada sesi lama di sessionStorage (akan dimigrasi via useEffect)
         if (sessionStorage.getItem('admin_logged_in') === 'true') {
-          const expiryTime = Date.now() + ADMIN_SESSION_DURATION_MS;
-          localStorage.setItem(ADMIN_SESSION_KEY, JSON.stringify({ loggedIn: true, expiresAt: expiryTime }));
-          sessionStorage.removeItem('admin_logged_in');
           return true;
         }
         return false;
@@ -40,16 +37,43 @@ export default function AdminDashboard() {
         if (Date.now() < parsed.expiresAt) {
           return true;
         } else {
-          // Sesi sudah kadaluarsa (melewati 1 bulan)
-          localStorage.removeItem(ADMIN_SESSION_KEY);
+          // Sesi sudah kadaluarsa — cleanup dilakukan via useEffect
           return false;
+        }
+      }
+    } catch {
+      // Cleanup dilakukan via useEffect
+    }
+    return false;
+  });
+
+  // Migrasi & cleanup localStorage — harus di useEffect, bukan di useState initializer
+  // (React 19 melarang side-effects di dalam lazy useState initializer → Error #310)
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(ADMIN_SESSION_KEY);
+      if (!stored) {
+        // Migrasi dari sessionStorage lama ke localStorage
+        if (sessionStorage.getItem('admin_logged_in') === 'true') {
+          const expiryTime = Date.now() + ADMIN_SESSION_DURATION_MS;
+          localStorage.setItem(ADMIN_SESSION_KEY, JSON.stringify({ loggedIn: true, expiresAt: expiryTime }));
+          sessionStorage.removeItem('admin_logged_in');
+        }
+      } else {
+        const parsed = JSON.parse(stored);
+        if (parsed?.loggedIn && typeof parsed?.expiresAt === 'number') {
+          if (Date.now() >= parsed.expiresAt) {
+            localStorage.removeItem(ADMIN_SESSION_KEY);
+            setIsAuthenticated(false);
+          }
+        } else {
+          localStorage.removeItem(ADMIN_SESSION_KEY);
         }
       }
     } catch {
       localStorage.removeItem(ADMIN_SESSION_KEY);
     }
-    return false;
-  });
+  }, []);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
 
