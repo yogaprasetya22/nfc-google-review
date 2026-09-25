@@ -28,6 +28,7 @@ import {
   Diamond,
   Search
 } from 'lucide-react';
+import { getIconStickerComponent } from '../elements/IconBadgeRenderer';
 import type { NfcTagEntity } from '@/types/nfc';
 
 interface DrawerElementsProps {
@@ -442,6 +443,63 @@ export function DrawerElements({ onAddNewElement, tag }: DrawerElementsProps) {
           fillColor: '#0f172a'
         }
       ]
+    },
+    {
+      category: 'Geometri Kreatif & Dekorasi',
+      items: [
+        {
+          id: 'corner_arc',
+          label: 'Lengkungan Sudut',
+          shapeType: 'corner_arc' as const,
+          width: 150,
+          height: 150,
+          icon: (
+            <svg viewBox="0 0 24 24" className="w-5 h-5 fill-slate-800">
+              <path d="M0,0 L24,0 C24,13.25 13.25,24 0,24 Z" />
+            </svg>
+          ),
+          fillColor: '#3b82f6'
+        },
+        {
+          id: 'blob_organic',
+          label: 'Blob Organik',
+          shapeType: 'blob_organic' as const,
+          width: 140,
+          height: 140,
+          icon: (
+            <svg viewBox="0 0 24 24" className="w-5 h-5 fill-slate-800">
+              <path d="M18.7,5.3 C22,8.6 22.5,14.8 19.6,18.7 C16.8,22.5 10.5,23.5 6.2,21.1 C1.9,18.7 -0.5,12.9 1.4,8.1 C3.3,3.3 10,-0.4 14.8,1.4 C16.7,2.4 17.7,3.8 18.7,5.3 Z" />
+            </svg>
+          ),
+          fillColor: '#ec4899'
+        },
+        {
+          id: 'wave_ribbon',
+          label: 'Gelombang Desain',
+          shapeType: 'wave_ribbon' as const,
+          width: 240,
+          height: 100,
+          icon: (
+            <svg viewBox="0 0 24 12" className="w-5 h-3 fill-slate-800">
+              <path d="M0,3.6 C6,8.4 18,-1.2 24,3.6 L24,12 L0,12 Z" />
+            </svg>
+          ),
+          fillColor: '#10b981'
+        },
+        {
+          id: 'badge_ribbon',
+          label: 'Pita Badge',
+          shapeType: 'badge_ribbon' as const,
+          width: 110,
+          height: 130,
+          icon: (
+            <svg viewBox="0 0 24 24" className="w-5 h-5 fill-slate-800">
+              <path d="M3.6,2.4 L20.4,2.4 L20.4,20.4 L12,15.6 L3.6,20.4 Z" />
+            </svg>
+          ),
+          fillColor: '#f59e0b'
+        }
+      ]
     }
   ];
 
@@ -531,32 +589,115 @@ export function DrawerElements({ onAddNewElement, tag }: DrawerElementsProps) {
         </div>
       ))}
 
-      {/* Komponen Brand Google Review */}
+      {/* Koleksi Stiker & Icon Vektor Populer */}
       <div className="space-y-2 pt-2 border-t border-slate-200">
         <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block">
-          Komponen Google
+          Stiker & Icon Vektor
+        </span>
+        <div className="grid grid-cols-3 gap-1.5">
+          {[
+            { id: 'smartphone', label: 'Ponsel NFC', color: '#4285F4', bg: '#eff6ff' },
+            { id: 'radio', label: 'Gelombang NFC', color: '#3b82f6', bg: '#eff6ff' },
+            { id: 'wifi', label: 'Wi-Fi Hotspot', color: '#10b981', bg: '#ecfdf5' },
+            { id: 'mappin', label: 'Lokasi Maps', color: '#ea4335', bg: '#fef2f2' },
+            { id: 'heart', label: 'Love / Favorit', color: '#e11d48', bg: '#fff1f2' },
+            { id: 'thumbsup', label: 'Jempol Like', color: '#3b82f6', bg: '#eff6ff' },
+            { id: 'share', label: 'Bagikan', color: '#8b5cf6', bg: '#f5f3ff' },
+            { id: 'camera', label: 'Scan Kamera', color: '#0f172a', bg: '#f1f5f9' },
+            { id: 'chat', label: 'WhatsApp', color: '#22c55e', bg: '#f0fdf4' },
+            { id: 'award', label: 'Badge Mutu', color: '#f59e0b', bg: '#fffbeb' },
+            { id: 'check', label: 'Centang Verified', color: '#10b981', bg: '#ecfdf5' },
+            { id: 'sparkles', label: 'Bintang Sparkle', color: '#f59e0b', bg: '#fffbeb' }
+          ].map((item) => {
+            const IconComp = getIconStickerComponent(item.id);
+            return (
+              <button
+                key={item.id}
+                onClick={() =>
+                  onAddNewElement('icon_badge', item.label, '', {
+                    width: 50,
+                    height: 50,
+                    iconName: item.id,
+                    iconColor: item.color,
+                    badgeBgColor: item.bg,
+                    badgeShape: 'circle'
+                  })
+                }
+                className="p-2 rounded-xl bg-white border border-slate-200 hover:border-blue-500 text-left text-xs font-semibold flex flex-col items-center justify-center gap-1 shadow-2xs hover:bg-slate-50 transition group"
+                title={`Tambah icon ${item.label}`}
+              >
+                <div
+                  style={{ backgroundColor: item.bg, color: item.color }}
+                  className="w-8 h-8 rounded-full flex items-center justify-center shadow-xs group-hover:scale-110 transition-transform"
+                >
+                  <IconComp className="w-4 h-4" />
+                </div>
+                <span className="text-[10px] text-slate-700 font-medium truncate w-full text-center">
+                  {item.label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Komponen Brand Google & Review */}
+      <div className="space-y-2 pt-2 border-t border-slate-200">
+        <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block">
+          Komponen Google & Review
         </span>
         <div className="grid grid-cols-2 gap-1.5">
           <button
+            onClick={() => onAddNewElement('nfc_target', 'Touchpoint Chip NFC')}
+            className="p-2 rounded-xl bg-white border border-slate-200 hover:border-blue-500 text-left text-xs font-semibold flex items-center gap-1.5 shadow-2xs hover:bg-slate-50 transition"
+          >
+            <span className="text-base">📡</span>
+            Chip NFC Tap
+          </button>
+          <button
+            onClick={() => onAddNewElement('qrcode', 'QR Code Link Review')}
+            className="p-2 rounded-xl bg-white border border-slate-200 hover:border-blue-500 text-left text-xs font-semibold flex items-center gap-1.5 shadow-2xs hover:bg-slate-50 transition"
+          >
+            <span className="text-base">🏁</span>
+            QR Code
+          </button>
+          <button
             onClick={() => onAddNewElement('stars_5', '5 Bintang Emas')}
-            className="p-2 rounded-xl bg-white border border-slate-200 hover:border-blue-500 text-left text-xs font-semibold flex items-center gap-1.5 shadow-2xs"
+            className="p-2 rounded-xl bg-white border border-slate-200 hover:border-blue-500 text-left text-xs font-semibold flex items-center gap-1.5 shadow-2xs hover:bg-slate-50 transition"
           >
             <Star className="h-3.5 w-3.5 text-amber-500 fill-amber-500" />
-            5 Bintang
+            5 Bintang Emas
           </button>
           <button
-            onClick={() => onAddNewElement('logo_google', 'Badge Logo Google')}
-            className="p-2 rounded-xl bg-white border border-slate-200 hover:border-blue-500 text-left text-xs font-semibold flex items-center gap-1.5 shadow-2xs"
+            onClick={() => onAddNewElement('logo_google', 'Logo Google 4-Warna')}
+            className="p-2 rounded-xl bg-white border border-slate-200 hover:border-blue-500 text-left text-xs font-semibold flex items-center gap-1.5 shadow-2xs hover:bg-slate-50 transition"
           >
             <span className="text-blue-600 font-bold text-xs">G</span>
-            Logo Google
+            Logo Google Resmi
           </button>
           <button
-            onClick={() => onAddNewElement('google_badge_pill', 'Tombol CTA Review')}
-            className="col-span-2 p-2 rounded-xl bg-white border border-slate-200 hover:border-blue-500 text-left text-xs font-semibold flex items-center gap-1.5 shadow-2xs"
+            onClick={() => onAddNewElement('google_badge_pill', 'Tombol Pill "Review us on Google"')}
+            className="col-span-2 p-2 rounded-xl bg-slate-900 text-white hover:bg-slate-800 text-left text-xs font-semibold flex items-center justify-center gap-1.5 shadow-2xs transition"
           >
-            <Bookmark className="h-3.5 w-3.5 text-blue-600" />
+            <Bookmark className="h-3.5 w-3.5 text-blue-400" />
             Tombol Pill "Review us on Google"
+          </button>
+          <button
+            onClick={() =>
+              onAddNewElement('shape', 'Background Lengkungan Google', '', {
+                shapeType: 'rounded_rect',
+                width: 320,
+                height: 100,
+                fillColor: '#ffffff',
+                borderRadius: 24,
+                strokeColor: '#e2e8f0',
+                borderWidth: 1
+              })
+            }
+            className="col-span-2 p-2 rounded-xl bg-white border border-slate-200 hover:border-blue-500 text-left text-xs font-semibold flex items-center justify-between shadow-2xs hover:bg-slate-50 transition"
+          >
+            <span>Kotak Card Putih Review Us</span>
+            <span className="text-[10px] text-blue-600 font-bold">+ Tambah</span>
           </button>
         </div>
       </div>

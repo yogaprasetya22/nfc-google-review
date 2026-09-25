@@ -38,6 +38,7 @@ import { LinkCardsEditor } from '@/components/hub/LinkCardsEditor';
 import { MobilePreview } from '@/components/hub/MobilePreview';
 import type { FeedbackItem } from '@/types/nfc';
 import { compressImageToKB } from '@/lib/imageCompressor';
+import { uploadToGoogleDrive } from '@/lib/gdrive';
 import { parseMapsUrl, resolveMapsUrlAsync } from '@/lib/utils';
 
 export default function ManageTag() {
@@ -279,36 +280,23 @@ export default function ManageTag() {
     else setUploadingCover(true);
 
     try {
-      // 1. Kompres gambar di browser (Maksimal 800px untuk avatar / 1200px untuk cover)
+      // 1. Kompres gambar di browser (Maksimal 600px untuk avatar / 1200px untuk cover)
       const maxDim = targetType === 'avatar' ? 600 : 1200;
       const { blob, fileName, sizeKB } = await compressImageToKB(file, maxDim, maxDim, 0.82);
 
-      // 2. Upload ke Supabase Storage bucket 'nfc'
-      const filePath = `${tagId}/${targetType}-${Date.now()}.webp`;
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('nfc')
-        .upload(filePath, blob, {
-          contentType: 'image/webp',
-          upsert: true
-        });
-
-      if (uploadError) {
-        throw new Error(uploadError.message);
-      }
-
-      // 3. Dapatkan Public URL
-      const { data: publicData } = supabase.storage.from('nfc').getPublicUrl(filePath);
-      const publicUrl = publicData?.publicUrl || '';
+      // 2. Upload 100% ke Google Drive via Serverless API
+      const gdriveRes = await uploadToGoogleDrive(blob, fileName);
+      const publicUrl = gdriveRes.directUrl || gdriveRes.link;
 
       if (targetType === 'avatar') {
         setAvatarUrl(publicUrl);
-        toast.success(`Foto profil berhasil diunggah (${sizeKB} KB)!`);
+        toast.success(`Foto profil berhasil diunggah ke Google Drive (${sizeKB} KB)!`);
       } else {
         setCoverUrl(publicUrl);
-        toast.success(`Banner berhasil diunggah (${sizeKB} KB)!`);
+        toast.success(`Banner berhasil diunggah ke Google Drive (${sizeKB} KB)!`);
       }
     } catch (err: any) {
-      toast.error(`Gagal mengunggah gambar: ${err.message || 'Cek koneksi internet'}`);
+      toast.error(`Gagal mengunggah gambar ke Google Drive: ${err.message || 'Cek koneksi internet'}`);
     } finally {
       if (targetType === 'avatar') setUploadingAvatar(false);
       else setUploadingCover(false);

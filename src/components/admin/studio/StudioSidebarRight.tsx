@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import FontPicker from 'react-fontpicker-ts';
 import 'react-fontpicker-ts/dist/index.css';
 import {
@@ -15,9 +15,17 @@ import {
   ChevronsDown,
   Layers as LayersIcon,
   Italic,
-  Type
+  Type,
+  Wand2,
+  Loader2,
+  Sparkles,
+  Crop
 } from 'lucide-react';
 import type { CanvasElement, DimensionInfo } from './types';
+import { removeImageBackground } from '@/lib/bgRemoval';
+import { uploadToGoogleDrive } from '@/lib/gdrive';
+import { toast } from 'sonner';
+import { ImageCropModal } from './ImageCropModal';
 
 interface StudioSidebarRightProps {
   selectedElement: CanvasElement | undefined;
@@ -42,6 +50,65 @@ function StudioSidebarRightComponent({
   calcRightCenterPct,
   isInteracting
 }: StudioSidebarRightProps) {
+  const [isRemovingBg, setIsRemovingBg] = useState(false);
+  const [removeBgStatus, setRemoveBgStatus] = useState<string>('');
+  const [showCropModal, setShowCropModal] = useState(false);
+
+  const handleConfirmCrop = async (croppedBlob: Blob) => {
+    if (!selectedElement) return;
+    const toastId = toast.loading('Menyimpan gambar hasil crop ke Google Drive...');
+    try {
+      const fileName = `${selectedElement.label || 'image'}-cropped-${Date.now()}.png`;
+      const uploadRes = await uploadToGoogleDrive(croppedBlob, fileName);
+      const finalUrl = uploadRes.directUrl || URL.createObjectURL(croppedBlob);
+
+      onUpdateSelectedElement({
+        imageUrl: finalUrl,
+        label: `${selectedElement.label || 'Gambar'} (Cropped)`
+      });
+      toast.success('Gambar berhasil dipotong (crop)!', { id: toastId });
+    } catch (err: any) {
+      toast.error(`Gagal menyimpan hasil crop: ${err?.message || 'Terjadi kesalahan'}`, { id: toastId });
+    }
+  };
+
+  const handleRemoveBackground = async () => {
+    if (!selectedElement || selectedElement.type !== 'image' || !selectedElement.imageUrl) return;
+
+    setIsRemovingBg(true);
+    setRemoveBgStatus('Memproses...');
+    const toastId = toast.loading('Menghapus latar belakang gambar...');
+
+    try {
+      // 1. Jalankan proses removeBackground (Canvas pixel analyzer)
+      const transparentBlob = await removeImageBackground(selectedElement.imageUrl, (pct, msg) => {
+        setRemoveBgStatus(msg);
+        toast.loading(msg, { id: toastId });
+      });
+
+      // 2. Upload gambar transparan ke Google Drive
+      setRemoveBgStatus('Menyimpan ke GDrive...');
+      toast.loading('Menyimpan hasil ke Google Drive...', { id: toastId });
+      
+      const fileName = `${selectedElement.label || 'image'}-nobg-${Date.now()}.png`;
+      const uploadRes = await uploadToGoogleDrive(transparentBlob, fileName);
+
+      const finalUrl = uploadRes.directUrl || URL.createObjectURL(transparentBlob);
+
+      onUpdateSelectedElement({
+        imageUrl: finalUrl,
+        label: `${selectedElement.label || 'Gambar'} (Transparan)`
+      });
+
+      toast.success('Latar belakang berhasil dihapus!', { id: toastId });
+    } catch (err: any) {
+      console.error('Error removing background:', err);
+      toast.error(`Gagal menghapus background: ${err?.message || 'Terjadi kesalahan'}`, { id: toastId });
+    } finally {
+      setIsRemovingBg(false);
+      setRemoveBgStatus('');
+    }
+  };
   return (
     <aside className="w-80 bg-white border-l border-slate-200 flex flex-col p-4 overflow-y-auto shadow-2xs shrink-0">
       <div className="flex items-center justify-between pb-3 border-b border-slate-200">
@@ -374,6 +441,76 @@ function StudioSidebarRightComponent({
             </div>
           )}
 
+          {/* Icon Badge Inspector */}
+          {selectedElement.type === 'icon_badge' && (
+            <div className="space-y-3 bg-slate-50 p-3.5 rounded-2xl border-2 border-neutral-900/10 shadow-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold text-slate-900 block">Pengaturan Stiker Icon</span>
+                <span className="text-[10px] font-mono text-blue-600 uppercase font-semibold">Icon Badge</span>
+              </div>
+
+              <div>
+                <label className="text-[10px] text-slate-500 block mb-1">Bentuk Wadah (Container)</label>
+                <div className="grid grid-cols-4 gap-1">
+                  {(['circle', 'rounded', 'square', 'none'] as const).map((shape) => (
+                    <button
+                      key={shape}
+                      type="button"
+                      onClick={() => onUpdateSelectedElement({ badgeShape: shape })}
+                      className={`py-1 text-[11px] font-bold rounded-lg border transition ${
+                        (selectedElement.badgeShape || 'circle') === shape
+                          ? 'bg-neutral-900 text-white border-neutral-900'
+                          : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                      }`}
+                    >
+                      {shape === 'circle'
+                        ? 'Bulat'
+                        : shape === 'rounded'
+                        ? 'Lengkung'
+                        : shape === 'square'
+                        ? 'Kotak'
+                        : 'Polos'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-[10px] text-slate-500 block mb-1">Warna Icon</label>
+                  <div className="flex items-center gap-1.5 bg-white p-1 rounded-xl border border-slate-200">
+                    <input
+                      type="color"
+                      value={selectedElement.iconColor || '#4285F4'}
+                      onChange={(e) => onUpdateSelectedElement({ iconColor: e.target.value })}
+                      className="w-6 h-6 rounded cursor-pointer border-0 p-0"
+                    />
+                    <span className="text-[11px] font-mono font-medium text-slate-700">
+                      {selectedElement.iconColor || '#4285F4'}
+                    </span>
+                  </div>
+                </div>
+
+                {selectedElement.badgeShape !== 'none' && (
+                  <div>
+                    <label className="text-[10px] text-slate-500 block mb-1">Warna Background</label>
+                    <div className="flex items-center gap-1.5 bg-white p-1 rounded-xl border border-slate-200">
+                      <input
+                        type="color"
+                        value={selectedElement.badgeBgColor || '#eff6ff'}
+                        onChange={(e) => onUpdateSelectedElement({ badgeBgColor: e.target.value })}
+                        className="w-6 h-6 rounded cursor-pointer border-0 p-0"
+                      />
+                      <span className="text-[11px] font-mono font-medium text-slate-700">
+                        {selectedElement.badgeBgColor || '#eff6ff'}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Image Object Inspector */}
           {selectedElement.type === 'image' && (
             <div className="space-y-3 bg-slate-50 p-3.5 rounded-2xl border-2 border-neutral-900/10 shadow-xs">
@@ -383,12 +520,46 @@ function StudioSidebarRightComponent({
               </div>
 
               {selectedElement.imageUrl && (
-                <div className="w-full h-24 bg-white rounded-xl border border-slate-200 overflow-hidden flex items-center justify-center p-1 shadow-2xs">
-                  <img
-                    src={selectedElement.imageUrl}
-                    alt={selectedElement.label}
-                    className="max-w-full max-h-full object-contain rounded"
-                  />
+                <div className="space-y-2">
+                  <div className="w-full h-24 bg-white rounded-xl border border-slate-200 overflow-hidden flex items-center justify-center p-1 shadow-2xs">
+                    <img
+                      src={selectedElement.imageUrl}
+                      alt={selectedElement.label}
+                      className="max-w-full max-h-full object-contain rounded"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setShowCropModal(true)}
+                      className="py-2 px-2.5 text-xs bg-white border border-slate-200 hover:bg-slate-50 text-slate-800 rounded-xl font-bold transition flex items-center justify-center gap-1.5 shadow-2xs"
+                      title="Potong / Crop area gambar"
+                    >
+                      <Crop className="w-3.5 h-3.5 text-purple-600" />
+                      <span>Crop / Potong</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={isRemovingBg}
+                      onClick={handleRemoveBackground}
+                      className="py-2 px-2 text-xs bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-xl font-bold transition flex items-center justify-center gap-1 shadow-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                      title="Hapus background gambar secara instan (0.1 detik)"
+                    >
+                      {isRemovingBg ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          <span className="truncate">{removeBgStatus || 'Proses...'}</span>
+                        </>
+                      ) : (
+                        <>
+                          <Wand2 className="w-3.5 h-3.5" />
+                          <span className="truncate">Hapus BG</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
               )}
 
@@ -656,6 +827,16 @@ function StudioSidebarRightComponent({
           <Sliders className="h-8 w-8 mb-2 opacity-30 text-slate-500" />
           <span>Klik komponen di canvas untuk mengubah teks, posisi, atau ukuran</span>
         </div>
+      )}
+
+      {/* Modal Potong / Crop Gambar Interaktif */}
+      {showCropModal && selectedElement?.type === 'image' && selectedElement.imageUrl && (
+        <ImageCropModal
+          imageUrl={selectedElement.imageUrl}
+          imageLabel={selectedElement.label}
+          onConfirmCrop={handleConfirmCrop}
+          onClose={() => setShowCropModal(false)}
+        />
       )}
     </aside>
   );

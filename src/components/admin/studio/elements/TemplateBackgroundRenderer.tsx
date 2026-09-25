@@ -84,6 +84,34 @@ export function TemplateBackgroundRenderer({ element: el }: TemplateBackgroundRe
         </div>
       );
 
+    case 'multicolor_pop':
+      return (
+        <div className="w-full h-full relative overflow-hidden pointer-events-none rounded-3xl select-none bg-white">
+          {/* Top-Right Yellow Section */}
+          <div className="absolute top-0 right-0 w-2/5 h-2/5 bg-amber-400" />
+          {/* Top-Right Blue Sector */}
+          <div className="absolute top-0 right-0 w-1/4 h-1/4 bg-blue-500" />
+          {/* Right Red Sector */}
+          <div className="absolute top-1/5 right-0 w-2/5 h-4/5 bg-red-500 rounded-tl-full" />
+          {/* Bottom Green Flow */}
+          <div className="absolute bottom-0 left-0 w-full h-3/5 bg-emerald-500 rounded-tr-[160px]" />
+          {/* Top-Left Crisp Off-White Layer */}
+          <div className="absolute top-0 left-0 w-3/5 h-2/5 bg-slate-100 rounded-br-[120px] opacity-80" />
+        </div>
+      );
+
+    case 'corner_curves':
+      return (
+        <div className="w-full h-full relative overflow-hidden pointer-events-none rounded-3xl select-none bg-white">
+          {/* Top Right Blue Curved Header Corner */}
+          <div className="absolute -top-10 -right-10 w-44 h-44 rounded-full bg-blue-600 flex items-center justify-center p-8">
+            <div className="w-full h-full border-2 border-white/20 rounded-full" />
+          </div>
+          {/* Bottom Corner Multi-Color Arc (Red, Yellow, Green, Blue) */}
+          <div className="absolute -bottom-16 -left-16 w-60 h-60 rounded-full border-[18px] border-emerald-500 border-t-red-500 border-r-amber-400 border-b-blue-600 opacity-90" />
+        </div>
+      );
+
     default:
       return null;
   }

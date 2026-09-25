@@ -11,7 +11,8 @@ export const CanvasElementSchema = z.object({
     'google_badge_pill',
     'shape',
     'image',
-    'template_bg'
+    'template_bg',
+    'icon_badge'
   ]),
   label: z.string(),
   x: z.number().min(0).max(100),
@@ -23,13 +24,21 @@ export const CanvasElementSchema = z.object({
   opacity: z.number().min(0).max(100).optional().default(100),
   rotation: z.number().optional().default(0),
 
+  // Icon Badge Properties
+  iconName: z.string().optional(),
+  badgeBgColor: z.string().optional(),
+  iconColor: z.string().optional(),
+  badgeShape: z.enum(['circle', 'rounded', 'square', 'none']).optional(),
+
   // Template Background Properties
   bgVariant: z.enum([
     'wave',
     'black_curve',
     'frame_quad',
     'badge_circle',
-    'qr_focus'
+    'qr_focus',
+    'multicolor_pop',
+    'corner_curves'
   ]).optional(),
   primaryColor: z.string().optional(),
   secondaryColor: z.string().optional(),
@@ -97,6 +106,12 @@ export const CanvasElementSchema = z.object({
     'chat_square',
     'cloud',
 
+    // Desain Geometris Tambahan (Layouting & Background Elements)
+    'corner_arc',
+    'blob_organic',
+    'wave_ribbon',
+    'badge_ribbon',
+
     // Special
     'google_ring'
   ]).optional(),
@@ -121,7 +136,10 @@ export type TemplateType =
   | 'google_frame_quad'
   | 'google_badge_circle'
   | 'google_back_qr_focus'
-  | 'minimalist';
+  | 'google_multicolor_pop'
+  | 'google_clean_cards'
+  | 'minimalist'
+  | (string & {});
 
 export type CardSide = 'front' | 'back';
 
@@ -145,5 +163,8 @@ export interface CustomTemplate {
   preset: CardPreset;
   elements: CanvasElement[];
   thumbnail_url?: string | null;
+  description?: string;
+  category?: 'official' | 'custom';
+  is_starter?: boolean;
   created_at?: string;
 }

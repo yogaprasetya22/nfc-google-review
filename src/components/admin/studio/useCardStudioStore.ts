@@ -10,15 +10,13 @@ import type {
 } from './types';
 import { DIMENSIONS_MAP } from './types';
 import {
-  getTemplateWaveElements,
-  getTemplateBlackCurveElements,
-  getTemplateStarsVerticalElements,
-  getTemplateFrameQuadElements,
-  getTemplateBadgeCircleElements,
-  getTemplateBackSideElements
-} from './templatePresets';
+  STARTER_TEMPLATES,
+  DEFAULT_BLANK_ELEMENTS,
+  loadExternalStarterTemplates
+} from './starterTemplates';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
+import { deleteGDriveFile, extractGDriveFileId } from '@/lib/gdrive';
 
 interface HistoryState {
   past: CanvasElement[][];
@@ -146,8 +144,8 @@ export const useCardStudioStore = create<CardStudioState>((set, get) => ({
   bgImageBack: null,
   bgScaleMode: 'cover',
 
-  frontHistory: createInitialHistory(getTemplateBlackCurveElements('')),
-  backHistory: createInitialHistory(getTemplateBackSideElements('')),
+  frontHistory: createInitialHistory(DEFAULT_BLANK_ELEMENTS),
+  backHistory: createInitialHistory(DEFAULT_BLANK_ELEMENTS),
   selectedElementId: null,
   isSaving: false,
   customTemplates: [],
@@ -168,7 +166,7 @@ export const useCardStudioStore = create<CardStudioState>((set, get) => ({
       }
     }
     if (!frontElems || frontElems.length === 0) {
-      frontElems = getTemplateBlackCurveElements(tag?.business_name);
+      frontElems = DEFAULT_BLANK_ELEMENTS;
     }
 
     let backElems = saved?.back?.elements;
@@ -181,15 +179,15 @@ export const useCardStudioStore = create<CardStudioState>((set, get) => ({
       }
     }
     if (!backElems || backElems.length === 0) {
-      backElems = getTemplateBackSideElements(tag?.business_name);
+      backElems = DEFAULT_BLANK_ELEMENTS;
     }
 
-    const preset: CardPreset = (saved?.preset as CardPreset) || 'square';
+    const preset: CardPreset = (saved?.preset as CardPreset) || 'card_v';
 
     set({
       cardPreset: preset,
-      dimensions: DIMENSIONS_MAP[preset] || DIMENSIONS_MAP.square,
-      activeTemplateFront: (saved?.front?.template as TemplateType) || 'google_black_curve',
+      dimensions: DIMENSIONS_MAP[preset] || DIMENSIONS_MAP.card_v,
+      activeTemplateFront: (saved?.front?.template as TemplateType) || 'google_multicolor_pop',
       activeTemplateBack: (saved?.back?.template as TemplateType) || 'google_back_qr_focus',
       bgImageFront: saved?.front?.bgImage || null,
       bgImageBack: saved?.back?.bgImage || null,
@@ -336,6 +334,22 @@ export const useCardStudioStore = create<CardStudioState>((set, get) => ({
         content: customContent,
         ...options
       };
+    } else if (type === 'icon_badge') {
+      newElem = {
+        id: newId,
+        type: 'icon_badge',
+        label: label || 'Icon Badge',
+        x: options?.x ?? 50,
+        y: options?.y ?? 50,
+        width: options?.width || 56,
+        height: options?.height || 56,
+        visible: true,
+        iconName: options?.iconName || 'smartphone',
+        iconColor: options?.iconColor || '#4285F4',
+        badgeBgColor: options?.badgeBgColor || '#eff6ff',
+        badgeShape: options?.badgeShape || 'circle',
+        ...options
+      };
     } else if (type === 'image') {
       newElem = {
         id: newId,
@@ -387,6 +401,16 @@ export const useCardStudioStore = create<CardStudioState>((set, get) => ({
       toast.error('Buka kunci objek terlebih dahulu sebelum menghapus.');
       return;
     }
+    // Hapus juga dari Google Drive jika elemen berupa gambar yang tersimpan di GDrive
+    if (target?.type === 'image' && target.imageUrl) {
+      const gdriveFileId = extractGDriveFileId(target.imageUrl);
+      if (gdriveFileId) {
+        deleteGDriveFile(gdriveFileId).catch((err) => {
+          console.warn('Gagal menghapus file dari Google Drive:', err);
+        });
+      }
+    }
+
     updateCurrentElements(current.filter((el) => el.id !== selectedElementId));
     set({ selectedElementId: null });
     toast.success('Objek berhasil dihapus!');
@@ -450,32 +474,33 @@ export const useCardStudioStore = create<CardStudioState>((set, get) => ({
   },
 
   applyTemplate: (tmpl, businessName) => {
-    const { activeSide, updateCurrentElements } = get();
+    const { activeSide, updateCurrentElements, customTemplates, setCardPreset } = get();
+    // 1. Cari template dari STARTER_TEMPLATES atau customTemplates
+    const matched =
+      STARTER_TEMPLATES.find((t) => t.id === tmpl) ||
+      customTemplates.find((t) => t.id === tmpl);
+
     let newElements: CanvasElement[] = [];
 
-    if (tmpl === 'google_modern_wave') {
-      newElements = getTemplateWaveElements(businessName);
-      toast.success('Template Wave Biru-Ungu dimuat!');
-    } else if (tmpl === 'google_black_curve') {
-      newElements = getTemplateBlackCurveElements(businessName);
-      toast.success('Template Lengkungan Hitam Elegan dimuat!');
-    } else if (tmpl === 'google_stars_vertical') {
-      set({ cardPreset: 'card_v', dimensions: DIMENSIONS_MAP.card_v });
-      newElements = getTemplateStarsVerticalElements(businessName);
-      toast.success('Template Bintang Vertikal dimuat!');
-    } else if (tmpl === 'google_frame_quad') {
-      newElements = getTemplateFrameQuadElements(businessName);
-      toast.success('Template Frame 4 Warna Google dimuat!');
-    } else if (tmpl === 'google_badge_circle') {
-      set({ cardPreset: 'card_v', dimensions: DIMENSIONS_MAP.card_v });
-      newElements = getTemplateBadgeCircleElements(businessName);
-      toast.success('Template Lingkaran 4 Warna Google dimuat!');
-    } else if (tmpl === 'google_back_qr_focus') {
-      set({ cardPreset: 'square', dimensions: DIMENSIONS_MAP.square });
-      newElements = getTemplateBackSideElements(businessName);
-      toast.success('Template Sisi Belakang: QR Focus dimuat!');
+    if (matched) {
+      if (matched.preset) {
+        setCardPreset(matched.preset);
+      }
+      newElements = matched.elements.map((el) => {
+        if (el.type === 'text' && el.content && businessName) {
+          return {
+            ...el,
+            content: el.content
+              .replace(/\{\{business_name\}\}/gi, businessName)
+              .replace(/YOUR BUSINESS LOGO/gi, businessName.toUpperCase())
+          };
+        }
+        return el;
+      });
+      toast.success(`Template "${matched.title}" dimuat!`);
     } else {
-      newElements = getTemplateWaveElements(businessName);
+      newElements = DEFAULT_BLANK_ELEMENTS;
+      toast.info('Template dimuat ke kanvas!');
     }
 
     if (activeSide === 'front') {
@@ -488,17 +513,14 @@ export const useCardStudioStore = create<CardStudioState>((set, get) => ({
 
   resetCurrentLayout: (businessName) => {
     const { activeSide } = get();
+    const fresh = DEFAULT_BLANK_ELEMENTS;
     if (activeSide === 'front') {
-      const fresh = getTemplateBlackCurveElements(businessName);
       set({
-        activeTemplateFront: 'google_black_curve',
         frontHistory: createInitialHistory(fresh),
         selectedElementId: null
       });
     } else {
-      const fresh = getTemplateBackSideElements(businessName);
       set({
-        activeTemplateBack: 'google_back_qr_focus',
         backHistory: createInitialHistory(fresh),
         selectedElementId: null
       });
@@ -639,29 +661,41 @@ export const useCardStudioStore = create<CardStudioState>((set, get) => ({
 
   fetchCustomTemplates: async () => {
     try {
+      // 1. Ambil template standar dari file JSON eksternal
+      const externalTemplates = await loadExternalStarterTemplates();
+
+      // 2. Ambil template kreasi pengguna dari Supabase studio_templates
+      let userTemplates: CustomTemplate[] = [];
       const { data, error } = await supabase
         .from('studio_templates')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) {
-        // Table might not exist yet before SQL migration run, fallback gracefully
+      if (!error && data) {
+        userTemplates = data;
+        localStorage.setItem('studio_custom_templates', JSON.stringify(data));
+      } else {
         const local = localStorage.getItem('studio_custom_templates');
         if (local) {
-          set({ customTemplates: JSON.parse(local) });
+          try {
+            userTemplates = JSON.parse(local);
+          } catch (e) {
+            // safe
+          }
         }
-        return;
       }
 
-      if (data) {
-        set({ customTemplates: data });
-        localStorage.setItem('studio_custom_templates', JSON.stringify(data));
+      // Gabungkan user templates dan external starter templates
+      const combined = [...userTemplates];
+      for (const ext of externalTemplates) {
+        if (!combined.some((t) => t.id === ext.id)) {
+          combined.push(ext);
+        }
       }
+
+      set({ customTemplates: combined });
     } catch (err) {
-      const local = localStorage.getItem('studio_custom_templates');
-      if (local) {
-        set({ customTemplates: JSON.parse(local) });
-      }
+      console.warn('Error fetching studio templates:', err);
     }
   },
 

@@ -5,10 +5,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Sparkles, ExternalLink, QrCode, Radio, Star, Trash2 } from 'lucide-react';
 import QRCode from 'qrcode';
-import {
-  getTemplateBlackCurveElements,
-  getTemplateBackSideElements
-} from './studio/templatePresets';
+import { DEFAULT_BLANK_ELEMENTS } from './studio/starterTemplates';
+import { TemplateBackgroundRenderer } from './studio/elements/TemplateBackgroundRenderer';
 
 interface TagCardPreviewProps {
   tag: NfcTagEntity;
@@ -40,10 +38,8 @@ export function TagCardPreview({ tag, onDesignTag, onDeleteTag }: TagCardPreview
   const hasCustomElements = Boolean(currentSideData?.elements && currentSideData.elements.length > 0);
   const elementsToRender = hasCustomElements
     ? currentSideData!.elements
-    : previewSide === 'front'
-    ? getTemplateBlackCurveElements(tag.business_name)
-    : getTemplateBackSideElements(tag.business_name);
-  const activeTemplate = currentSideData?.template || (previewSide === 'front' ? 'google_black_curve' : 'google_back_qr_focus');
+    : DEFAULT_BLANK_ELEMENTS;
+  const activeTemplate = currentSideData?.template || 'custom';
   const bgImage = currentSideData?.bgImage || null;
 
   return (
@@ -90,7 +86,7 @@ export function TagCardPreview({ tag, onDesignTag, onDeleteTag }: TagCardPreview
       {/* 2. Visual Representation of NFC Card (Real-time Template + Elements) */}
       <div className="p-4 flex flex-col items-center justify-center bg-slate-100/60">
         <div className="w-full max-w-[270px] aspect-square rounded-2xl bg-white border border-slate-200/90 shadow-md relative overflow-hidden flex flex-col select-none">
-          {/* Background Layer: Custom Image or Template Backdrop */}
+          {/* Background Layer: Custom Image or Dynamic Template Background */}
           {bgImage ? (
             <img
               src={bgImage}
@@ -98,50 +94,85 @@ export function TagCardPreview({ tag, onDesignTag, onDeleteTag }: TagCardPreview
               className="absolute inset-0 w-full h-full object-cover pointer-events-none"
             />
           ) : (
-            <>
-              {activeTemplate === 'google_black_curve' && (
-                <div className="absolute inset-0 pointer-events-none overflow-hidden">
-                  <div className="absolute inset-x-0 top-0 h-[44%] bg-neutral-950" />
-                  <svg
-                    viewBox="0 0 270 40"
-                    preserveAspectRatio="none"
-                    className="absolute inset-x-0 top-[35%] w-full h-[18%] fill-white"
-                  >
-                    <path d="M0,8 C70,30 200,30 270,8 L270,40 L0,40 Z" />
-                  </svg>
-                  <div className="absolute inset-x-0 bottom-0 top-[48%] bg-white" />
-                  <div className="absolute left-1/2 top-[54%] -translate-x-1/2 h-5 w-[1px] bg-slate-300" />
-                  <div className="absolute left-1/2 top-[74%] -translate-x-1/2 h-5 w-[1px] bg-slate-300" />
-                </div>
-              )}
+            (() => {
+              // Cek apakah ada elemen template_bg di dalam elements
+              const bgElem = elementsToRender.find((el: any) => el.type === 'template_bg');
+              if (bgElem) {
+                return (
+                  <div className="absolute inset-0 pointer-events-none overflow-hidden">
+                    <TemplateBackgroundRenderer element={bgElem} />
+                  </div>
+                );
+              }
 
-              {activeTemplate === 'google_modern_wave' && (
-                <div className="absolute inset-0 pointer-events-none overflow-hidden">
-                  <div className="absolute inset-x-0 top-0 h-[48%] bg-gradient-to-r from-blue-500 via-indigo-600 to-indigo-500" />
-                  <svg
-                    viewBox="0 0 270 40"
-                    preserveAspectRatio="none"
-                    className="absolute inset-x-0 top-[38%] w-full h-[22%] fill-white"
-                  >
-                    <path d="M0,15 C80,5 180,25 270,12 L270,40 L0,40 Z" />
-                  </svg>
-                  <div className="absolute inset-x-0 bottom-0 top-[52%] bg-white" />
-                </div>
-              )}
+              // Fallback jika tidak ada template_bg element
+              if (activeTemplate === 'google_modern_wave') {
+                return (
+                  <div className="absolute inset-0 pointer-events-none overflow-hidden">
+                    <TemplateBackgroundRenderer
+                      element={{
+                        id: 'bg',
+                        type: 'template_bg',
+                        label: 'Wave',
+                        x: 50,
+                        y: 50,
+                        width: 520,
+                        height: 520,
+                        visible: true,
+                        bgVariant: 'wave',
+                        primaryColor: '#3b82f6',
+                        secondaryColor: '#4f46e5'
+                      }}
+                    />
+                  </div>
+                );
+              }
 
-              {activeTemplate === 'google_back_qr_focus' && (
+              if (activeTemplate === 'google_back_qr_focus') {
+                return (
+                  <div className="absolute inset-0 pointer-events-none overflow-hidden">
+                    <TemplateBackgroundRenderer
+                      element={{
+                        id: 'bg',
+                        type: 'template_bg',
+                        label: 'QR Focus',
+                        x: 50,
+                        y: 50,
+                        width: 520,
+                        height: 520,
+                        visible: true,
+                        bgVariant: 'qr_focus'
+                      }}
+                    />
+                  </div>
+                );
+              }
+
+              return (
                 <div className="absolute inset-0 pointer-events-none overflow-hidden">
-                  <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-blue-500 via-red-500 to-amber-400" />
-                  <div className="absolute inset-x-0 bottom-0 h-1.5 bg-gradient-to-r from-emerald-500 via-blue-500 to-indigo-500" />
+                  <TemplateBackgroundRenderer
+                    element={{
+                      id: 'bg',
+                      type: 'template_bg',
+                      label: 'Black Curve',
+                      x: 50,
+                      y: 50,
+                      width: 520,
+                      height: 520,
+                      visible: true,
+                      bgVariant: 'black_curve',
+                      primaryColor: '#0a0a0a'
+                    }}
+                  />
                 </div>
-              )}
-            </>
+              );
+            })()
           )}
 
           {/* Dynamic Elements Layer */}
           <div className="relative w-full h-full overflow-hidden">
             {elementsToRender.map((el: any) => {
-              if (!el.visible) return null;
+              if (!el.visible || el.type === 'template_bg') return null;
               const posX = el.x;
               const posY = el.y;
 
@@ -263,6 +294,25 @@ export function TagCardPreview({ tag, onDesignTag, onDeleteTag }: TagCardPreview
                           )}
                         </div>
                       )}
+                    </div>
+                  )}
+
+                  {el.type === 'image' && (
+                    <div
+                      style={{
+                        opacity: el.opacity !== undefined ? el.opacity / 100 : 1,
+                        borderRadius: el.borderRadius ? `${el.borderRadius * 0.5}px` : undefined,
+                        overflow: el.borderRadius ? 'hidden' : undefined
+                      }}
+                      className="w-full h-full flex items-center justify-center"
+                    >
+                      {el.imageUrl ? (
+                        <img
+                          src={el.imageUrl}
+                          alt={el.label}
+                          className="w-full h-full object-cover pointer-events-none"
+                        />
+                      ) : null}
                     </div>
                   )}
                 </div>

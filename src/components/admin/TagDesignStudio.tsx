@@ -12,6 +12,7 @@ import { StudioArtboard } from './studio/StudioArtboard';
 import { StudioSidebarRight } from './studio/StudioSidebarRight';
 import { renderSideToCanvas } from './studio/exportCanvas';
 import type { CanvasElement, CardSide } from './studio/types';
+import { uploadToGoogleDrive } from '@/lib/gdrive';
 
 interface TagDesignStudioProps {
   tag: NfcTagEntity;
@@ -571,31 +572,18 @@ export function TagDesignStudio({ tag, onClose, onTagUpdated }: TagDesignStudioP
           }
         }
 
-        // 2. Upload ke Supabase Storage bucket 'nfc'
+        // 2. Upload 100% ke Google Drive
         let finalUrl = dataUrl;
         try {
-          const ext = file.name.split('.').pop() || 'png';
-          const filePath = `studio/${tag.id}/${Date.now()}-${Math.random().toString(36).slice(2, 7)}.${ext}`;
-          const { error: uploadError } = await supabase.storage
-            .from('nfc')
-            .upload(filePath, file, {
-              contentType: file.type || 'image/png',
-              upsert: true
-            });
-
-          if (!uploadError) {
-            const { data: publicData } = supabase.storage.from('nfc').getPublicUrl(filePath);
-            if (publicData?.publicUrl) {
-              finalUrl = publicData.publicUrl;
-            }
-          } else {
-            console.warn('Storage upload error, fallback to data URL:', uploadError.message);
+          const gdriveRes = await uploadToGoogleDrive(file);
+          if (gdriveRes.directUrl) {
+            finalUrl = gdriveRes.directUrl;
           }
-        } catch (err) {
-          console.warn('Storage upload exception, fallback to data URL:', err);
+        } catch (err: any) {
+          console.warn('Google Drive upload error, fallback to data URL:', err?.message || err);
         }
 
-        toast.success(`Gambar "${file.name}" berhasil diunggah!`, { id: toastId });
+        toast.success(`Gambar "${file.name}" berhasil diunggah ke Google Drive!`, { id: toastId });
         onSuccess(finalUrl, w, h);
       };
       img.src = dataUrl;
@@ -710,7 +698,7 @@ export function TagDesignStudio({ tag, onClose, onTagUpdated }: TagDesignStudioP
     link.download = `NFC-Card-${tag.id}-${sideToExport}-${store.cardPreset}.png`;
     link.href = pngData;
     link.click();
-    toast.success(`Desain Sisi ${isFront ? 'Depan' : 'Belakang'} siap cetak (2x) berhasil didownload!`);
+    toast.success(`Desain Sisi ${isFront ? 'Depan' : 'Belakang'} Ultra HD 4K siap cetak berhasil didownload!`);
   };
 
   const handleExportBothSides = async () => {
@@ -743,7 +731,7 @@ export function TagDesignStudio({ tag, onClose, onTagUpdated }: TagDesignStudioP
         linkBack.href = backPng;
         linkBack.click();
       }
-      toast.success('Kedua sisi kartu (Depan & Belakang) berhasil didownload!');
+      toast.success('Kedua sisi kartu (Depan & Belakang) Ultra HD 4K berhasil didownload!');
     }, 400);
   };
 

@@ -7,6 +7,7 @@ import { Plus, Trash2, Sparkles, MapPin, Search, Loader2, CheckCircle2, Navigati
 import { parseMapsUrl, resolveMapsUrlAsync } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
+import { uploadToGoogleDrive } from '@/lib/gdrive';
 
 interface PlaceSuggestion {
   place_id: string;
@@ -197,28 +198,14 @@ export function LinkCardsEditor({
 
     setUploadingPdfIdx(linkIdx);
     try {
-      const folderPrefix = tagId || 'public-menus';
-      const cleanFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-      const filePath = `${folderPrefix}/menu-${Date.now()}-${cleanFileName}`;
-
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('nfc')
-        .upload(filePath, file, {
-          contentType: 'application/pdf',
-          upsert: true
-        });
-
-      if (uploadError) {
-        throw new Error(uploadError.message);
-      }
-
-      const { data: publicData } = supabase.storage.from('nfc').getPublicUrl(filePath);
-      const publicUrl = publicData?.publicUrl || '';
+      // Upload 100% ke Google Drive
+      const gdriveRes = await uploadToGoogleDrive(file);
+      const publicUrl = gdriveRes.directUrl || gdriveRes.link;
 
       onLinkChange(linkIdx, 'url', publicUrl);
-      toast.success(`File PDF Menu "${file.name}" berhasil diunggah!`);
+      toast.success(`File PDF Menu "${file.name}" berhasil diunggah ke Google Drive!`);
     } catch (err: any) {
-      toast.error(`Gagal mengunggah PDF: ${err.message || 'Cek koneksi internet'}`);
+      toast.error(`Gagal mengunggah PDF ke Google Drive: ${err.message || 'Cek koneksi internet'}`);
     } finally {
       setUploadingPdfIdx(null);
       e.target.value = '';

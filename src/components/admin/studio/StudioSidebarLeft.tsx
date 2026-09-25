@@ -83,7 +83,7 @@ function StudioSidebarLeftComponent({
               {activeTab === 'templates' && 'Katalog Template'}
               {activeTab === 'elements' && 'Elemen & Bentuk'}
               {activeTab === 'text' && 'Teks Desain'}
-              {activeTab === 'uploads' && 'Unggahan Logo'}
+              {activeTab === 'uploads' && 'Unggah Gambar'}
               {activeTab === 'layers' && 'Susunan Lapisan'}
             </span>
             <button

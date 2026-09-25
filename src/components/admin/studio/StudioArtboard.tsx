@@ -404,7 +404,7 @@ export function StudioArtboard({
           )}
 
           {/* Canvas Draggable Elements (Isi Visual Terpotong di Kanvas) */}
-          {elements.map((el) => {
+          {elements.map((el, idx) => {
             if (!el.visible) return null;
 
             const isSelected = selectedElementId === el.id;
@@ -437,7 +437,7 @@ export function StudioArtboard({
                   height: `${el.height}px`,
                   transform: `translate(${posX - el.width / 2}px, ${posY - el.height / 2}px) rotate(${rotationAngle}deg)`,
                   touchAction: isEditing ? 'auto' : 'none',
-                  zIndex: isSelected ? 40 : 1
+                  zIndex: idx + 1
                 }}
                 className={`absolute flex items-center justify-center select-none group will-change-transform ${
                   el.locked ? 'cursor-default' : isEditing ? 'cursor-text' : 'cursor-move'
@@ -460,6 +460,8 @@ export function StudioArtboard({
           const selPosX = (selectedElement.x / 100) * currentDimensions.width;
           const selPosY = (selectedElement.y / 100) * currentDimensions.height;
           const selRotation = selectedElement.rotation || 0;
+          const selectedIndex = elements.findIndex((el) => el.id === selectedElement.id);
+          const selZIndex = selectedIndex >= 0 ? selectedIndex + 1 : 10;
 
           return (
             <div
@@ -475,7 +477,7 @@ export function StudioArtboard({
                 height: `${selectedElement.height}px`,
                 transform: `translate(${selPosX - selectedElement.width / 2}px, ${selPosY - selectedElement.height / 2}px) rotate(${selRotation}deg)`,
                 touchAction: 'none',
-                zIndex: 50
+                zIndex: selZIndex
               }}
               className={`absolute flex items-center justify-center select-none will-change-transform ${
                 selectedElement.locked

@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "seed": "node scripts/seed.js"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
@@ -18,7 +19,9 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cn": "^0.4.0",
+    "formidable": "^3.5.4",
     "framer-motion": "^13.4.1",
+    "googleapis": "^182.0.0",
     "jsbarcode": "^3.12.3",
     "jsqr": "^1.4.0",
     "lucide-react": "^1.47.0",
@@ -38,6 +41,7 @@
     "zustand": "^5.0.15"
   },
   "devDependencies": {
+    "@types/formidable": "^3.5.1",
     "@types/jsbarcode": "^3.11.4",
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.18",

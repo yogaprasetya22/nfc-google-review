@@ -1,10 +1,10 @@
-import React from 'react';
-import type { TemplateType, CustomTemplate } from '../types';
-import { QrCode, Radio, Sparkles, Trash2, Layout } from 'lucide-react';
+import React, { useState } from 'react';
+import type { CustomTemplate, CardPreset } from '../types';
+import { Sparkles, Trash2, Layout, Smartphone, Square, CreditCard, Layers } from 'lucide-react';
 
 interface DrawerTemplatesProps {
-  activeTemplate: TemplateType;
-  onApplyTemplate: (tmpl: TemplateType) => void;
+  activeTemplate: string;
+  onApplyTemplate: (tmpl: any) => void;
   customTemplates?: CustomTemplate[];
   onApplyCustomTemplate?: (template: CustomTemplate) => void;
   onDeleteCustomTemplate?: (templateId: string) => void;
@@ -17,23 +17,123 @@ export function DrawerTemplates({
   onApplyCustomTemplate,
   onDeleteCustomTemplate
 }: DrawerTemplatesProps) {
+  const [filterPreset, setFilterPreset] = useState<CardPreset | 'all'>('all');
+
+  // Filter template berdasarkan orientasi kanvas
+  const filteredTemplates = customTemplates.filter((t) =>
+    filterPreset === 'all' ? true : t.preset === filterPreset
+  );
+
+  const officialTemplates = filteredTemplates.filter((t) => t.category === 'official' || t.is_starter);
+  const userTemplates = filteredTemplates.filter((t) => t.category !== 'official' && !t.is_starter);
+
   return (
     <div className="space-y-4">
       <div>
-        <h3 className="text-xs font-bold text-slate-900">Katalog Template Desain</h3>
-        <p className="text-[11px] text-slate-500">Pilih tata letak kartu resmi atau template kustom</p>
+        <h3 className="text-xs font-bold text-slate-900">Katalog Desain Template (100% Dinamis)</h3>
+        <p className="text-[11px] text-slate-500">
+          Semua template murni berbasis data elemen kanvas tanpa ada layout yang di-hardcode di kode.
+        </p>
       </div>
 
-      {/* Bagian Template Kustom Hasil Publish User */}
-      {customTemplates && customTemplates.length > 0 && (
+      {/* Filter Orientasi: Semua, Vertikal, 1:1 Kotak, Horizontal */}
+      <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-xl">
+        <button
+          type="button"
+          onClick={() => setFilterPreset('all')}
+          className={`flex-1 py-1 px-2 text-[10px] font-bold rounded-lg transition ${
+            filterPreset === 'all' ? 'bg-white text-blue-600 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          Semua
+        </button>
+        <button
+          type="button"
+          onClick={() => setFilterPreset('card_v')}
+          className={`flex-1 py-1 px-2 text-[10px] font-bold rounded-lg transition flex items-center justify-center gap-1 ${
+            filterPreset === 'card_v' ? 'bg-white text-blue-600 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+          }`}
+          title="Vertikal"
+        >
+          <Smartphone className="w-3 h-3" />
+          <span>Vertikal</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setFilterPreset('square')}
+          className={`flex-1 py-1 px-2 text-[10px] font-bold rounded-lg transition flex items-center justify-center gap-1 ${
+            filterPreset === 'square' ? 'bg-white text-blue-600 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+          }`}
+          title="1:1 Kotak"
+        >
+          <Square className="w-3 h-3" />
+          <span>1:1</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setFilterPreset('card_h')}
+          className={`flex-1 py-1 px-2 text-[10px] font-bold rounded-lg transition flex items-center justify-center gap-1 ${
+            filterPreset === 'card_h' ? 'bg-white text-blue-600 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+          }`}
+          title="Horizontal"
+        >
+          <CreditCard className="w-3 h-3" />
+          <span>Horiz</span>
+        </button>
+      </div>
+
+      {/* Tombol Blank Canvas (Mulai Kanvas Kosong) */}
+      <div
+        onClick={() => {
+          onApplyCustomTemplate?.({
+            id: `blank_${Date.now()}`,
+            title: 'Kanvas Kosong',
+            preset: filterPreset === 'all' ? 'card_v' : filterPreset,
+            elements: [
+              {
+                id: 'nfc',
+                type: 'nfc_target',
+                label: 'Touchpoint Chip NFC',
+                x: 35,
+                y: 50,
+                width: 110,
+                height: 90,
+                visible: true
+              },
+              {
+                id: 'qr',
+                type: 'qrcode',
+                label: 'QR Code Link Review',
+                x: 65,
+                y: 50,
+                width: 120,
+                height: 120,
+                visible: true
+              }
+            ]
+          });
+        }}
+        className="p-2.5 rounded-2xl border-2 border-dashed border-slate-300 hover:border-blue-400 hover:bg-blue-50/30 cursor-pointer transition flex items-center gap-3 bg-white"
+      >
+        <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center font-bold text-slate-600 text-lg">
+          +
+        </div>
+        <div className="flex flex-col text-left">
+          <span className="font-bold text-xs text-slate-900">Mulai Kanvas Kosong (Blank)</span>
+          <span className="text-[10px] text-slate-500">Desain 100% murni dari kreativitas Anda</span>
+        </div>
+      </div>
+
+      {/* 1. Bagian Kreasi Desain Pengguna (Tersimpan di DB) */}
+      {userTemplates.length > 0 && (
         <div className="space-y-2">
           <div className="flex items-center gap-1.5 text-xs font-bold text-blue-700">
             <Sparkles className="w-3.5 h-3.5" />
-            <span>Template Publikasi Saya ({customTemplates.length})</span>
+            <span>Kreasi Saya ({userTemplates.length})</span>
           </div>
 
           <div className="space-y-2">
-            {customTemplates.map((item) => (
+            {userTemplates.map((item) => (
               <div
                 key={item.id}
                 onClick={() => onApplyCustomTemplate?.(item)}
@@ -42,7 +142,8 @@ export function DrawerTemplates({
                 <div className="h-14 rounded-xl bg-white border border-blue-200 flex items-center justify-center relative overflow-hidden">
                   <Layout className="w-6 h-6 text-blue-500" />
                   <span className="text-[10px] font-mono text-slate-500 ml-2">
-                    {item.preset === 'card_v' ? 'Vertikal' : item.preset === 'card_h' ? 'Horizontal' : 'Square'} • {item.elements.length} Elemen
+                    {item.preset === 'card_v' ? 'Vertikal' : item.preset === 'card_h' ? 'Horizontal' : '1:1 Kotak'} •{' '}
+                    {item.elements.length} Elemen
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
@@ -76,137 +177,71 @@ export function DrawerTemplates({
         </div>
       )}
 
-      <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-        Template Standar Resmi Google
+      {/* 2. Bagian Template Katalog Dinamis */}
+      <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center justify-between">
+        <span>Template Katalog ({officialTemplates.length})</span>
+        <span className="text-[9px] font-normal text-slate-400">Dinamis</span>
       </div>
 
       <div className="space-y-2.5">
-        {/* 1. Wave Biru-Ungu */}
-        <div
-          onClick={() => onApplyTemplate('google_modern_wave')}
-          className={`p-2.5 rounded-2xl border cursor-pointer transition flex flex-col gap-1.5 ${
-            activeTemplate === 'google_modern_wave'
-              ? 'border-blue-600 bg-blue-50/50 ring-2 ring-blue-600 shadow-xs'
-              : 'border-slate-200 hover:border-slate-300 bg-white shadow-2xs'
-          }`}
-        >
-          <div className="h-16 rounded-xl bg-gradient-to-r from-blue-500 via-indigo-600 to-indigo-500 relative overflow-hidden flex items-center justify-center">
-            <div className="w-8 h-8 rounded-lg bg-white shadow flex items-center justify-center">
-              <span className="font-bold text-xs text-blue-600">G</span>
-            </div>
-            <div className="absolute inset-x-0 bottom-0 h-4 bg-white rounded-t-xl" />
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="font-bold text-xs text-slate-900">Wave Biru-Ungu (TAPiTAG)</span>
-            <span className="text-[10px] font-mono text-slate-400">1:1 Square</span>
-          </div>
-        </div>
+        {officialTemplates.map((tmpl) => {
+          const isSelected = activeTemplate === tmpl.id;
+          const presetLabel =
+            tmpl.preset === 'card_v'
+              ? 'Vertikal'
+              : tmpl.preset === 'card_h'
+              ? 'Horizontal'
+              : '1:1 Kotak';
 
-        {/* 2. Lengkungan Hitam Elegan */}
-        <div
-          onClick={() => onApplyTemplate('google_black_curve')}
-          className={`p-2.5 rounded-2xl border cursor-pointer transition flex flex-col gap-1.5 ${
-            activeTemplate === 'google_black_curve'
-              ? 'border-neutral-900 bg-slate-100 ring-2 ring-neutral-900 shadow-xs'
-              : 'border-slate-200 hover:border-slate-300 bg-white shadow-2xs'
-          }`}
-        >
-          <div className="h-16 rounded-xl bg-neutral-950 relative overflow-hidden flex items-center px-3 gap-2">
-            <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center shrink-0 shadow-xs">
-              <span className="font-black text-xs text-blue-600">G</span>
-            </div>
-            <div className="flex flex-col text-left">
-              <span className="text-[9px] text-slate-300 font-medium leading-none">review us on</span>
-              <span className="text-xs text-white font-black leading-tight tracking-tight">Google</span>
-              <span className="text-[9px] text-amber-400">★★★★★</span>
-            </div>
-            <div className="absolute inset-x-0 -bottom-2 h-5 bg-white rounded-t-[100%]" />
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="font-bold text-xs text-slate-900">Lengkungan Hitam Elegan</span>
-            <span className="text-[10px] font-mono font-bold text-emerald-600">Terfavorit 🔥</span>
-          </div>
-        </div>
+          return (
+            <div
+              key={tmpl.id}
+              onClick={() => onApplyCustomTemplate?.(tmpl)}
+              className={`p-2.5 rounded-2xl border cursor-pointer transition flex flex-col gap-2 ${
+                isSelected
+                  ? 'border-blue-600 bg-blue-50/50 ring-2 ring-blue-600 shadow-xs'
+                  : 'border-slate-200 hover:border-slate-300 bg-white shadow-2xs'
+              }`}
+            >
+              {/* Visual Preview Box */}
+              <div className="h-16 rounded-xl bg-slate-50 border border-slate-200 relative overflow-hidden flex items-center justify-between px-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center shadow-xs text-blue-600 font-black text-sm">
+                    {tmpl.id.includes('clean') ? '📱' : tmpl.id.includes('qr') ? 'QR' : 'G'}
+                  </div>
+                  <div className="flex flex-col text-left">
+                    <span className="font-bold text-xs text-slate-900 leading-tight">{tmpl.title}</span>
+                    <span className="text-[10px] text-slate-500 leading-tight line-clamp-1">
+                      {tmpl.description || `${tmpl.elements.length} elemen kanvas`}
+                    </span>
+                  </div>
+                </div>
+              </div>
 
-        {/* 3. Vertikal Bintang Emas */}
-        <div
-          onClick={() => onApplyTemplate('google_stars_vertical')}
-          className={`p-2.5 rounded-2xl border cursor-pointer transition flex flex-col gap-1.5 ${
-            activeTemplate === 'google_stars_vertical'
-              ? 'border-blue-600 bg-blue-50/50 ring-2 ring-blue-600 shadow-xs'
-              : 'border-slate-200 hover:border-slate-300 bg-white shadow-2xs'
-          }`}
-        >
-          <div className="h-16 rounded-xl bg-slate-50 border border-slate-200 flex flex-col items-center justify-center gap-1">
-            <div className="px-3 py-0.5 rounded-full bg-blue-600 text-[9px] text-white font-bold">
-              Review us on Google
+              {/* Footer info: Preset badge & Element Count */}
+              <div className="flex items-center justify-between pt-0.5">
+                <div className="flex items-center gap-1.5">
+                  <span
+                    className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md ${
+                      tmpl.preset === 'card_v'
+                        ? 'bg-purple-100 text-purple-700'
+                        : tmpl.preset === 'card_h'
+                        ? 'bg-amber-100 text-amber-700'
+                        : 'bg-emerald-100 text-emerald-700'
+                    }`}
+                  >
+                    {presetLabel}
+                  </span>
+                  <span className="text-[10px] text-slate-400 font-mono flex items-center gap-1">
+                    <Layers className="w-2.5 h-2.5" />
+                    {tmpl.elements.length} obj
+                  </span>
+                </div>
+                <span className="text-[10px] font-bold text-blue-600 hover:underline">Terapkan →</span>
+              </div>
             </div>
-            <div className="flex text-amber-400 text-xs">★★★★★</div>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="font-bold text-xs text-slate-900">Vertikal Bintang Emas & CTA</span>
-            <span className="text-[10px] font-mono text-slate-400">Badge Vertikal</span>
-          </div>
-        </div>
-
-        {/* 4. Frame 4 Warna Google */}
-        <div
-          onClick={() => onApplyTemplate('google_frame_quad')}
-          className={`p-2.5 rounded-2xl border cursor-pointer transition flex flex-col gap-1.5 ${
-            activeTemplate === 'google_frame_quad'
-              ? 'border-blue-600 bg-blue-50/50 ring-2 ring-blue-600 shadow-xs'
-              : 'border-slate-200 hover:border-slate-300 bg-white shadow-2xs'
-          }`}
-        >
-          <div className="h-16 rounded-xl bg-white border-4 border-dashed border-blue-500 p-1 flex items-center justify-center">
-            <span className="text-xs font-bold text-slate-800">LOGO BRAND + QR</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="font-bold text-xs text-slate-900">Frame 4 Warna Google</span>
-            <span className="text-[10px] font-mono text-slate-400">1:1 Standee</span>
-          </div>
-        </div>
-
-        {/* 5. Lingkaran 4 Warna Google */}
-        <div
-          onClick={() => onApplyTemplate('google_badge_circle')}
-          className={`p-2.5 rounded-2xl border cursor-pointer transition flex flex-col gap-1.5 ${
-            activeTemplate === 'google_badge_circle'
-              ? 'border-blue-600 bg-blue-50/50 ring-2 ring-blue-600 shadow-xs'
-              : 'border-slate-200 hover:border-slate-300 bg-white shadow-2xs'
-          }`}
-        >
-          <div className="h-16 rounded-xl bg-white border border-slate-200 flex items-center justify-center">
-            <div className="w-10 h-10 rounded-full border-4 border-blue-500 border-t-red-500 border-r-amber-400 border-b-emerald-500 flex items-center justify-center">
-              <Radio className="h-4 w-4 text-slate-700" />
-            </div>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="font-bold text-xs text-slate-900">Lingkaran 4 Warna Google</span>
-            <span className="text-[10px] font-mono text-slate-400">Vertikal</span>
-          </div>
-        </div>
-
-        {/* 6. Sisi Belakang QR Focus */}
-        <div
-          onClick={() => onApplyTemplate('google_back_qr_focus')}
-          className={`p-2.5 rounded-2xl border cursor-pointer transition flex flex-col gap-1.5 ${
-            activeTemplate === 'google_back_qr_focus'
-              ? 'border-neutral-900 bg-slate-100 ring-2 ring-neutral-900 shadow-xs'
-              : 'border-slate-200 hover:border-slate-300 bg-white shadow-2xs'
-          }`}
-        >
-          <div className="h-16 rounded-xl bg-slate-50 border border-slate-200 flex flex-col items-center justify-center gap-1">
-            <div className="w-8 h-8 rounded bg-white border border-slate-300 flex items-center justify-center shadow-2xs">
-              <QrCode className="h-5 w-5 text-slate-800" />
-            </div>
-            <span className="text-[9px] font-bold text-slate-600">Scan QR Code Sisi Belakang</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="font-bold text-xs text-slate-900">Sisi Belakang (QR Fokus)</span>
-            <span className="text-[10px] font-mono font-bold text-blue-600">Belakang 🔄</span>
-          </div>
-        </div>
+          );
+        })}
       </div>
     </div>
   );

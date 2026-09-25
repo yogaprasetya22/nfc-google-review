@@ -1,6 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Sparkles, RotateCcw, Download, X, Undo2, Redo2, ChevronDown, Layers, Save, Loader2, BookmarkPlus } from 'lucide-react';
+import {
+  Sparkles,
+  RotateCcw,
+  Download,
+  X,
+  Undo2,
+  Redo2,
+  ChevronDown,
+  Layers,
+  Save,
+  Loader2,
+  BookmarkPlus,
+  SlidersHorizontal,
+  Square,
+  Smartphone,
+  CreditCard,
+  MoreVertical
+} from 'lucide-react';
 import type { CardPreset, CardSide } from './types';
 import type { NfcTagEntity } from '@/types/nfc';
 
@@ -25,6 +42,12 @@ interface StudioHeaderProps {
   onPublishAsTemplate?: (title: string) => Promise<boolean>;
 }
 
+const PRESET_OPTIONS: { id: CardPreset; label: string; icon: React.FC<{ className?: string }> }[] = [
+  { id: 'square', label: 'Stiker Kotak (1:1)', icon: Square },
+  { id: 'card_v', label: 'Kartu Vertikal', icon: Smartphone },
+  { id: 'card_h', label: 'Kartu Horizontal', icon: CreditCard }
+];
+
 function StudioHeaderComponent({
   tag,
   cardPreset,
@@ -46,9 +69,32 @@ function StudioHeaderComponent({
   onPublishAsTemplate
 }: StudioHeaderProps) {
   const [showExportMenu, setShowExportMenu] = useState(false);
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [showPresetMenu, setShowPresetMenu] = useState(false);
   const [showPublishModal, setShowPublishModal] = useState(false);
   const [templateTitle, setTemplateTitle] = useState('');
   const [isPublishing, setIsPublishing] = useState(false);
+
+  const moreMenuRef = useRef<HTMLDivElement>(null);
+  const presetMenuRef = useRef<HTMLDivElement>(null);
+  const exportMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close popovers on click outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (moreMenuRef.current && !moreMenuRef.current.contains(event.target as Node)) {
+        setShowMoreMenu(false);
+      }
+      if (presetMenuRef.current && !presetMenuRef.current.contains(event.target as Node)) {
+        setShowPresetMenu(false);
+      }
+      if (exportMenuRef.current && !exportMenuRef.current.contains(event.target as Node)) {
+        setShowExportMenu(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handlePublishSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,126 +110,203 @@ function StudioHeaderComponent({
       setIsPublishing(false);
     }
   };
+
+  const currentPresetObj = PRESET_OPTIONS.find((p) => p.id === cardPreset) || PRESET_OPTIONS[0];
+  const PresetIcon = currentPresetObj.icon;
+
   return (
-    <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 shrink-0 shadow-xs">
-      <div className="flex items-center gap-3">
-        <div className="flex items-center justify-center h-10 w-10 rounded-xl bg-neutral-900 text-white shadow-xs">
-          <Sparkles className="h-5 w-5" />
+    <header className="h-14 bg-white border-b border-slate-200/90 flex items-center justify-between px-3 md:px-5 shrink-0 shadow-xs z-30 select-none">
+      {/* 1. SISI KIRI: Branding, ID Tag & Undo/Redo */}
+      <div className="flex items-center gap-2 md:gap-3">
+        <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-neutral-900 text-white shadow-xs shrink-0">
+          <Sparkles className="h-4 w-4" />
         </div>
-        <div>
-          <div className="flex items-center gap-2">
-            {/* <h2 className="text-sm font-bold text-slate-900 tracking-tight">Studio Desain & Cetak NFC</h2> */}
-            <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-800 border border-slate-200">
-              {tag.id}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Switcher Sisi Kartu & Preset Dimension */}
-      <div className="flex items-center gap-3">
-        {/* Sisi Depan / Belakang Switcher */}
-        <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200">
-          <button
-            onClick={() => setActiveSide('front')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
-              activeSide === 'front'
-                ? 'bg-neutral-900 text-white shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <Layers className="h-3.5 w-3.5" />
-            Sisi Depan
-          </button>
-          <button
-            onClick={() => setActiveSide('back')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
-              activeSide === 'back'
-                ? 'bg-neutral-900 text-white shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <RotateCcw className="h-3.5 w-3.5" />
-            Sisi Belakang
-          </button>
+        
+        <div className="flex items-center gap-1.5">
+          <span className="font-mono text-[11px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-800 border border-slate-200">
+            {tag.id}
+          </span>
         </div>
 
-        {/* Preset Dimension Selection */}
-        <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
-          {(['square', 'card_v', 'card_h'] as const).map((presetKey) => (
-            <button
-              key={presetKey}
-              onClick={() => setCardPreset(presetKey)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                cardPreset === presetKey
-                  ? 'bg-white text-slate-900 shadow-xs font-semibold'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
-              }`}
-            >
-              {presetKey === 'square' && 'Stiker Kotak (1:1)'}
-              {presetKey === 'card_v' && 'Kartu Vertikal'}
-              {presetKey === 'card_h' && 'Kartu Horizontal'}
-            </button>
-          ))}
-        </div>
-      </div>
+        <div className="h-4 w-[1px] bg-slate-200 hidden sm:block mx-1" />
 
-      {/* Action Controls: Undo/Redo + Margin + Reset + Download Dropdown */}
-      <div className="flex items-center gap-2">
-        {/* Undo / Redo Buttons */}
-        <div className="flex items-center bg-slate-100 rounded-xl border border-slate-200 p-0.5">
+        {/* Undo / Redo Compact Group */}
+        <div className="flex items-center bg-slate-100/90 rounded-lg p-0.5 border border-slate-200/80">
           <button
             onClick={onUndo}
             disabled={!canUndo}
-            className={`p-2 rounded-lg transition flex items-center justify-center ${
+            className={`p-1.5 rounded-md transition flex items-center justify-center ${
               canUndo
                 ? 'text-slate-700 hover:text-slate-900 hover:bg-white hover:shadow-2xs cursor-pointer'
                 : 'text-slate-300 cursor-not-allowed'
             }`}
             title="Undo (Ctrl+Z)"
           >
-            <Undo2 className="h-4 w-4" />
+            <Undo2 className="h-3.5 w-3.5" />
           </button>
           <button
             onClick={onRedo}
             disabled={!canRedo}
-            className={`p-2 rounded-lg transition flex items-center justify-center ${
+            className={`p-1.5 rounded-md transition flex items-center justify-center ${
               canRedo
                 ? 'text-slate-700 hover:text-slate-900 hover:bg-white hover:shadow-2xs cursor-pointer'
                 : 'text-slate-300 cursor-not-allowed'
             }`}
             title="Redo (Ctrl+Y / Ctrl+Shift+Z)"
           >
-            <Redo2 className="h-4 w-4" />
+            <Redo2 className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </div>
+
+      {/* 2. SISI TENGAH: Side Switcher (Front/Back) & Preset Selector Dropdown */}
+      <div className="flex items-center gap-2">
+        {/* Switcher Sisi Kartu */}
+        <div className="flex items-center bg-slate-100 p-0.5 rounded-xl border border-slate-200/90">
+          <button
+            onClick={() => setActiveSide('front')}
+            className={`px-3 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+              activeSide === 'front'
+                ? 'bg-neutral-900 text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <Layers className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Sisi Depan</span>
+            <span className="sm:hidden">Depan</span>
+          </button>
+          <button
+            onClick={() => setActiveSide('back')}
+            className={`px-3 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+              activeSide === 'back'
+                ? 'bg-neutral-900 text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <RotateCcw className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Sisi Belakang</span>
+            <span className="sm:hidden">Belakang</span>
           </button>
         </div>
 
-        <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-2 py-1">
-          <span className="text-[11px] font-semibold text-slate-600">Jarak Dinding:</span>
-          {[25, 45, 60].map((pxVal) => (
-            <button
-              key={pxVal}
-              onClick={() => onApplyPreciseWallMargins(pxVal)}
-              className={`px-2 py-1 rounded-lg text-xs font-mono font-bold transition ${
-                wallMarginPx === pxVal
-                  ? 'bg-neutral-900 text-white shadow-2xs'
-                  : 'text-slate-600 hover:bg-slate-200/60'
-              }`}
-              title={`Kunci jarak objek tepat ${pxVal}px dari dinding kiri & kanan`}
-            >
-              {pxVal}px
-            </button>
-          ))}
-        </div>
+        {/* Dropdown Preset Kartu Canva-Style */}
+        <div className="relative" ref={presetMenuRef}>
+          <button
+            type="button"
+            onClick={() => setShowPresetMenu(!showPresetMenu)}
+            className="flex items-center gap-1.5 bg-slate-100/90 hover:bg-slate-200/80 px-2.5 py-1 rounded-xl border border-slate-200 text-xs font-semibold text-slate-800 transition"
+            title="Ubah Ukuran / Preset Kartu"
+          >
+            <PresetIcon className="h-3.5 w-3.5 text-slate-600" />
+            <span className="hidden md:inline">{currentPresetObj.label}</span>
+            <ChevronDown className="h-3 w-3 text-slate-500" />
+          </button>
 
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onResetLayout}
-          className="border-slate-200 text-slate-700 hover:bg-slate-100 text-xs h-9 rounded-xl"
-        >
-          <RotateCcw className="h-3.5 w-3.5 mr-1 text-slate-500" /> Reset
-        </Button>
+          {showPresetMenu && (
+            <div className="absolute left-0 mt-1.5 w-48 bg-white border border-slate-200 rounded-xl shadow-xl py-1 z-50 text-xs animate-in fade-in zoom-in-95">
+              <div className="px-3 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                Ukuran Kartu
+              </div>
+              {PRESET_OPTIONS.map((opt) => {
+                const Icon = opt.icon;
+                const isSelected = cardPreset === opt.id;
+                return (
+                  <button
+                    key={opt.id}
+                    onClick={() => {
+                      setCardPreset(opt.id);
+                      setShowPresetMenu(false);
+                    }}
+                    className={`w-full px-3 py-1.5 text-left flex items-center justify-between transition ${
+                      isSelected
+                        ? 'bg-slate-100 font-bold text-slate-900'
+                        : 'text-slate-700 hover:bg-slate-50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Icon className="h-3.5 w-3.5 text-slate-500" />
+                      <span>{opt.label}</span>
+                    </div>
+                    {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* 3. SISI KANAN: Tools Menu Popover, Save, Export Dropdown, Close */}
+      <div className="flex items-center gap-1.5 sm:gap-2">
+        {/* Menu Popover untuk Pengaturan Tambahan (Jarak Dinding, Reset, Publish) */}
+        <div className="relative" ref={moreMenuRef}>
+          <button
+            type="button"
+            onClick={() => setShowMoreMenu(!showMoreMenu)}
+            className="flex items-center gap-1 p-1.5 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-100 text-xs font-medium transition"
+            title="Pengaturan Jarak & Opsi Lainnya"
+          >
+            <SlidersHorizontal className="h-3.5 w-3.5" />
+            <span className="hidden xl:inline text-[11px] font-semibold">Margin ({wallMarginPx}px)</span>
+          </button>
+
+          {showMoreMenu && (
+            <div className="absolute right-0 mt-1.5 w-60 bg-white border border-slate-200 rounded-xl shadow-xl p-3 z-50 text-xs space-y-3 animate-in fade-in zoom-in-95">
+              {/* Pengaturan Jarak Dinding */}
+              <div>
+                <span className="text-[11px] font-bold text-slate-800 block mb-1.5">
+                  Jarak Margin Dinding:
+                </span>
+                <div className="grid grid-cols-3 gap-1 bg-slate-100 p-1 rounded-lg">
+                  {[25, 45, 60].map((pxVal) => (
+                    <button
+                      key={pxVal}
+                      onClick={() => onApplyPreciseWallMargins(pxVal)}
+                      className={`py-1 rounded-md text-[11px] font-mono font-bold transition text-center ${
+                        wallMarginPx === pxVal
+                          ? 'bg-neutral-900 text-white shadow-2xs'
+                          : 'text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      {pxVal}px
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="h-[1px] bg-slate-100" />
+
+              {/* Opsi Tambahan: Reset & Publish Template */}
+              <div className="space-y-1">
+                {onPublishAsTemplate && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowMoreMenu(false);
+                      setShowPublishModal(true);
+                    }}
+                    className="w-full text-left px-2.5 py-1.5 rounded-lg text-slate-700 hover:bg-blue-50 hover:text-blue-700 flex items-center gap-2 font-medium transition"
+                  >
+                    <BookmarkPlus className="h-3.5 w-3.5 text-blue-600" />
+                    <span>Jadikan Template Kustom</span>
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowMoreMenu(false);
+                    onResetLayout();
+                  }}
+                  className="w-full text-left px-2.5 py-1.5 rounded-lg text-slate-700 hover:bg-red-50 hover:text-red-700 flex items-center gap-2 font-medium transition"
+                >
+                  <RotateCcw className="h-3.5 w-3.5 text-slate-500" />
+                  <span>Reset Tata Letak Kartu</span>
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Simpan Desain ke Database */}
         {onSaveToDatabase && (
@@ -191,50 +314,38 @@ function StudioHeaderComponent({
             size="sm"
             onClick={onSaveToDatabase}
             disabled={isSaving}
-            className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold h-9 px-3.5 rounded-xl shadow-xs transition"
+            className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold h-8 px-3 rounded-lg shadow-xs transition"
           >
             {isSaving ? (
               <>
                 <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                Menyimpan...
+                <span className="hidden sm:inline">Menyimpan...</span>
               </>
             ) : (
               <>
-                <Save className="h-3.5 w-3.5 mr-1.5" />
-                Simpan Desain
+                <Save className="h-3.5 w-3.5 mr-1 sm:mr-1.5" />
+                <span className="hidden sm:inline">Simpan Desain</span>
+                <span className="sm:hidden">Simpan</span>
               </>
             )}
           </Button>
         )}
 
-        {/* Publish sebagai Template Baru ke Katalog */}
-        {onPublishAsTemplate && (
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => setShowPublishModal(true)}
-            className="border-blue-200 text-blue-700 bg-blue-50/50 hover:bg-blue-100/70 text-xs font-semibold h-9 px-3 rounded-xl shadow-2xs transition flex items-center gap-1.5"
-            title="Publikasikan desain saat ini menjadi template resmi di katalog"
-          >
-            <BookmarkPlus className="h-3.5 w-3.5 text-blue-600" />
-            <span>Publish Template</span>
-          </Button>
-        )}
-
         {/* Download PNG Dropdown */}
-        <div className="relative">
+        <div className="relative" ref={exportMenuRef}>
           <div className="flex items-center">
             <Button
               size="sm"
               onClick={() => onExportPNG(activeSide)}
-              className="bg-neutral-900 hover:bg-neutral-800 text-white text-xs font-semibold h-9 px-3 rounded-l-xl rounded-r-none shadow-xs border-r border-neutral-700"
+              className="bg-neutral-900 hover:bg-neutral-800 text-white text-xs font-semibold h-8 px-2.5 sm:px-3 rounded-l-lg rounded-r-none shadow-xs border-r border-neutral-700"
             >
-              <Download className="h-3.5 w-3.5 mr-1.5" />
-              Download {activeSide === 'front' ? 'Sisi Depan' : 'Sisi Belakang'}
+              <Download className="h-3.5 w-3.5 mr-1 sm:mr-1.5" />
+              <span className="hidden md:inline">Download {activeSide === 'front' ? 'Sisi Depan' : 'Sisi Belakang'}</span>
+              <span className="md:hidden">Export</span>
             </Button>
             <button
               onClick={() => setShowExportMenu(!showExportMenu)}
-              className="bg-neutral-900 hover:bg-neutral-800 text-white h-9 px-2 rounded-r-xl shadow-xs transition"
+              className="bg-neutral-900 hover:bg-neutral-800 text-white h-8 px-1.5 sm:px-2 rounded-r-lg shadow-xs transition"
               title="Pilihan Download"
             >
               <ChevronDown className="h-3.5 w-3.5" />
@@ -242,7 +353,7 @@ function StudioHeaderComponent({
           </div>
 
           {showExportMenu && (
-            <div className="absolute right-0 mt-1 w-56 bg-white border border-slate-200 rounded-2xl shadow-xl py-1.5 z-50 text-xs font-semibold animate-in fade-in zoom-in-95">
+            <div className="absolute right-0 mt-1 w-56 bg-white border border-slate-200 rounded-xl shadow-xl py-1.5 z-50 text-xs font-semibold animate-in fade-in zoom-in-95">
               <button
                 onClick={() => {
                   onExportPNG('front');
@@ -250,8 +361,8 @@ function StudioHeaderComponent({
                 }}
                 className="w-full px-3.5 py-2 text-left text-slate-800 hover:bg-slate-100 flex items-center justify-between"
               >
-                <span>Download Sisi Depan (PNG)</span>
-                <span className="text-[10px] text-slate-400 font-mono">2x Hi-Res</span>
+                <span>Download Sisi Depan</span>
+                <span className="text-[10px] text-emerald-600 font-mono font-bold bg-emerald-50 px-1.5 py-0.5 rounded">4K UHD</span>
               </button>
               <button
                 onClick={() => {
@@ -260,8 +371,8 @@ function StudioHeaderComponent({
                 }}
                 className="w-full px-3.5 py-2 text-left text-slate-800 hover:bg-slate-100 flex items-center justify-between"
               >
-                <span>Download Sisi Belakang (PNG)</span>
-                <span className="text-[10px] text-slate-400 font-mono">2x Hi-Res</span>
+                <span>Download Sisi Belakang</span>
+                <span className="text-[10px] text-emerald-600 font-mono font-bold bg-emerald-50 px-1.5 py-0.5 rounded">4K UHD</span>
               </button>
               <div className="h-[1px] bg-slate-100 my-1" />
               <button
@@ -271,16 +382,19 @@ function StudioHeaderComponent({
                 }}
                 className="w-full px-3.5 py-2 text-left text-blue-600 hover:bg-blue-50 font-bold flex items-center justify-between"
               >
-                <span>Download Keduanya (2 File PNG)</span>
-                <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">Zip/Multi</span>
+                <span>Download Kedua Sisi (Zip/Multi)</span>
+                <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-mono font-bold">4K UHD</span>
               </button>
             </div>
           )}
         </div>
 
+        <div className="h-4 w-[1px] bg-slate-200 mx-0.5" />
+
+        {/* Tombol Tutup Studio */}
         <button
           onClick={onClose}
-          className="h-9 w-9 flex items-center justify-center rounded-xl border border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition"
+          className="h-8 w-8 flex items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition"
           title="Tutup Studio"
         >
           <X className="h-4 w-4" />
@@ -340,7 +454,7 @@ function StudioHeaderComponent({
                   variant="outline"
                   size="sm"
                   onClick={() => setShowPublishModal(false)}
-                  className="text-xs h-9 rounded-xl"
+                  className="text-xs h-8 rounded-lg"
                 >
                   Batal
                 </Button>
@@ -348,7 +462,7 @@ function StudioHeaderComponent({
                   type="submit"
                   size="sm"
                   disabled={isPublishing || !templateTitle.trim()}
-                  className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold h-9 px-4 rounded-xl shadow-xs transition"
+                  className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold h-8 px-4 rounded-lg shadow-xs transition"
                 >
                   {isPublishing ? (
                     <>
