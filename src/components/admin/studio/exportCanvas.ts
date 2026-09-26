@@ -75,6 +75,12 @@ export async function renderSideToCanvas(
 
   await Promise.all(preloadTasks);
 
+  // Clip kanvas dengan rounded rectangle sesuai kartu fisik (persis StudioArtboard rounded-3xl)
+  const cardRadius = Math.round(Math.min(W, H) * 0.05); // ~24-26px
+  ctx.beginPath();
+  ctx.roundRect(0, 0, W, H, cardRadius);
+  ctx.clip();
+
   // 2. Gambar Background Kartu Dasar via Background Registry
   if (bg) {
     backgroundRendererRegistry.custom_image(ctx, W, H, bgImg);

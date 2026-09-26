@@ -254,11 +254,39 @@ function StudioSidebarRightComponent({
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="text-[10px] text-slate-500 block mb-1">Ukuran Font</label>
+                  <label className="text-[10px] text-slate-500 block mb-1">
+                    Ukuran Font
+                    <button
+                      type="button"
+                      title="Fit to Box – auto sesuaikan font agar pas di dalam outline"
+                      onClick={() => {
+                        if (!selectedElement) return;
+                        const txt = selectedElement.content || 'A';
+                        const family = selectedElement.fontFamily ? `"${selectedElement.fontFamily}", sans-serif` : 'sans-serif';
+                        const weight = selectedElement.fontWeight === 'black' ? 900 : selectedElement.fontWeight === 'normal' ? 400 : 700;
+                        // ponytail: binary search font size yang muat di width & height
+                        const cvs = document.createElement('canvas');
+                        const ctx = cvs.getContext('2d')!;
+                        let lo = 8, hi = 200, best = lo;
+                        while (lo <= hi) {
+                          const mid = Math.floor((lo + hi) / 2);
+                          ctx.font = `${weight} ${mid}px ${family}`;
+                          const w = ctx.measureText(txt).width;
+                          if (w <= selectedElement.width - 4 && mid <= selectedElement.height - 4) {
+                            best = mid; lo = mid + 1;
+                          } else { hi = mid - 1; }
+                        }
+                        onUpdateSelectedElement({ fontSize: best });
+                      }}
+                      className="ml-1.5 text-[9px] text-blue-600 font-semibold hover:underline"
+                    >
+                      Fit↗
+                    </button>
+                  </label>
                   <input
                     type="number"
                     min="8"
-                    max="60"
+                    max="200"
                     value={selectedElement.fontSize || 14}
                     onChange={(e) => onUpdateSelectedElement({ fontSize: Number(e.target.value) })}
                     className="w-full px-3 py-1.5 text-xs bg-white border border-slate-200 rounded-xl text-slate-900 font-mono"

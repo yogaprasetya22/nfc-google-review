@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { ZoomIn, ZoomOut, Magnet, Radio, QrCode, Star, Layers, RotateCcw, Lock, Unlock, Trash2, Edit3, Keyboard, X, Copy, MoreHorizontal, Upload } from 'lucide-react';
+import { ZoomIn, ZoomOut, Magnet, Radio, QrCode, Star, Layers, RotateCcw, Lock, Unlock, Trash2, Edit3, Check, Keyboard, X, Copy, MoreHorizontal, Upload } from 'lucide-react';
 import type { CanvasElement, TemplateType, DimensionInfo, CardSide } from './types';
 import { CanvasElementRenderer } from './elements/CanvasElementRenderer';
+import { TemplateBackgroundRenderer } from './elements/TemplateBackgroundRenderer';
 
 interface StudioArtboardProps {
   containerRef: React.RefObject<HTMLDivElement | null>;
@@ -324,7 +325,7 @@ export function StudioArtboard({
         {/* CLIPPED ARTBOARD CANVAS CONTENT (Objek terpotong rapi di tepi kartu) */}
         <div className="absolute inset-0 rounded-3xl overflow-hidden pointer-events-auto">
           {/* Custom Background Image if any */}
-          {bgImage && (
+          {bgImage ? (
             <img
               src={bgImage}
               alt="Background Template"
@@ -336,7 +337,36 @@ export function StudioArtboard({
                   : 'object-fill'
               }`}
             />
-          )}
+          ) : activeTemplate ? (
+            <div className="absolute inset-0 pointer-events-none">
+              <TemplateBackgroundRenderer
+                element={{
+                  id: 'auto_bg',
+                  type: 'template_bg',
+                  label: 'Background Template',
+                  x: 50,
+                  y: 50,
+                  width: currentDimensions.width,
+                  height: currentDimensions.height,
+                  bgVariant:
+                    activeTemplate === 'google_back_qr_focus'
+                      ? 'qr_focus'
+                      : activeTemplate === 'google_black_curve'
+                      ? 'black_curve'
+                      : activeTemplate === 'google_modern_wave'
+                      ? 'wave'
+                      : activeTemplate === 'google_frame_quad'
+                      ? 'frame_quad'
+                      : activeTemplate === 'google_badge_circle'
+                      ? 'badge_circle'
+                      : activeTemplate === 'google_multicolor_pop'
+                      ? 'multicolor_pop'
+                      : undefined,
+                  visible: true
+                }}
+              />
+            </div>
+          ) : null}
 
           {/* Grid overlay */}
           {showGuides && (
@@ -462,85 +492,119 @@ export function StudioArtboard({
           const selRotation = selectedElement.rotation || 0;
           const selectedIndex = elements.findIndex((el) => el.id === selectedElement.id);
           const selZIndex = selectedIndex >= 0 ? selectedIndex + 1 : 10;
+          const isSelEditing = editingElementId === selectedElement.id;
 
           return (
             <div
               onPointerDown={(e) => {
+                // Saat editing, biarkan textarea di bawah menerima event
+                if (isSelEditing) return;
                 if (!selectedElement.locked) {
                   onPointerDown(e, selectedElement.id);
                 }
               }}
-              onPointerMove={onPointerMove}
-              onPointerUp={onPointerUp}
+              onPointerMove={(e) => { if (!isSelEditing) onPointerMove(e); }}
+              onPointerUp={(e) => { if (!isSelEditing) onPointerUp(e); }}
+              onDoubleClick={(e) => {
+                e.stopPropagation();
+                if (selectedElement.type === 'text' && !selectedElement.locked) {
+                  setEditingElementId(selectedElement.id);
+                }
+              }}
               style={{
                 width: `${selectedElement.width}px`,
                 height: `${selectedElement.height}px`,
                 transform: `translate(${selPosX - selectedElement.width / 2}px, ${selPosY - selectedElement.height / 2}px) rotate(${selRotation}deg)`,
-                touchAction: 'none',
-                zIndex: selZIndex
+                touchAction: isSelEditing ? 'auto' : 'none',
+                zIndex: selZIndex,
+                // Saat editing: overlay jadi transparan agar textarea dapat focus
+                pointerEvents: isSelEditing ? 'none' : undefined
               }}
               className={`absolute flex items-center justify-center select-none will-change-transform ${
-                selectedElement.locked
+                isSelEditing
+                  ? 'ring-[1.5px] ring-blue-500 cursor-text'
+                  : selectedElement.locked
                   ? 'cursor-default ring-2 ring-amber-500 shadow-md'
                   : 'cursor-move ring-[1.5px] ring-[#8b3dff]'
               }`}
             >
               {/* Canva Action Pill directly above Canvas Element (Canva-style) */}
-              <div className="absolute -top-11 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-white px-2 py-1 rounded-lg shadow-lg border border-slate-200/90 z-50 pointer-events-auto animate-in fade-in zoom-in-95 duration-100">
-                <button
-                  type="button"
-                  onPointerDown={(e) => {
-                    e.stopPropagation();
-                    onToggleLock?.(selectedElement.id);
-                  }}
-                  className={`p-1 rounded-md transition flex items-center gap-1 text-[11px] font-medium px-1.5 ${
-                    selectedElement.locked
-                      ? 'bg-amber-500 text-white shadow-xs hover:bg-amber-600'
-                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                  }`}
-                  title={selectedElement.locked ? 'Buka Kunci Objek (Unlock)' : 'Kunci Objek (Lock)'}
-                >
-                  {selectedElement.locked ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
-                </button>
-
-                {selectedElement.id !== 'qr' && selectedElement.id !== 'nfc' && !selectedElement.locked && (
+              <div
+                className="absolute -top-11 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-white px-2 py-1 rounded-lg shadow-lg border border-slate-200/90 z-50 pointer-events-auto animate-in fade-in zoom-in-95 duration-100"
+                style={{ pointerEvents: 'auto' }}
+              >
+                {isSelEditing ? (
+                  // Saat mode edit teks: hanya tombol Selesai
+                  <button
+                    type="button"
+                    onPointerDown={(e) => {
+                      e.stopPropagation();
+                      setEditingElementId(null);
+                    }}
+                    className="p-1 rounded-md text-blue-600 bg-blue-50 hover:bg-blue-100 transition flex items-center gap-1 text-[10px] font-semibold px-2"
+                    title="Selesai mengedit (Enter/Esc)"
+                  >
+                    <Check className="w-3.5 h-3.5" />
+                    <span>Selesai</span>
+                  </button>
+                ) : (
                   <>
                     <button
                       type="button"
                       onPointerDown={(e) => {
                         e.stopPropagation();
-                        onDuplicateElement?.(selectedElement.id);
+                        onToggleLock?.(selectedElement.id);
                       }}
-                      className="p-1 rounded-md text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition"
-                      title="Duplikat (Ctrl+D)"
+                      className={`p-1 rounded-md transition flex items-center gap-1 text-[11px] font-medium px-1.5 ${
+                        selectedElement.locked
+                          ? 'bg-amber-500 text-white shadow-xs hover:bg-amber-600'
+                          : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                      }`}
+                      title={selectedElement.locked ? 'Buka Kunci Objek (Unlock)' : 'Kunci Objek (Lock)'}
                     >
-                      <Copy className="w-3.5 h-3.5" />
+                      {selectedElement.locked ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
                     </button>
 
-                    <button
-                      type="button"
-                      onPointerDown={(e) => {
-                        e.stopPropagation();
-                        onDeleteElement?.(selectedElement.id);
-                      }}
-                      className="p-1 rounded-md text-slate-600 hover:text-rose-600 hover:bg-rose-50 transition"
-                      title="Hapus (Delete)"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                    {selectedElement.id !== 'qr' && selectedElement.id !== 'nfc' && !selectedElement.locked && (
+                      <>
+                        <button
+                          type="button"
+                          onPointerDown={(e) => {
+                            e.stopPropagation();
+                            onDuplicateElement?.(selectedElement.id);
+                          }}
+                          className="p-1 rounded-md text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition"
+                          title="Duplikat (Ctrl+D)"
+                        >
+                          <Copy className="w-3.5 h-3.5" />
+                        </button>
 
-                    {selectedElement.type === 'text' && (
-                      <button
-                        type="button"
-                        onPointerDown={(e) => {
-                          e.stopPropagation();
-                          setEditingElementId(selectedElement.id);
-                        }}
-                        className="p-1 rounded-md text-blue-600 hover:bg-blue-50 transition flex items-center gap-1 text-[10px] font-semibold px-1"
-                        title="Tulis teks"
-                      >
-                        <Edit3 className="w-3.5 h-3.5" />
-                      </button>
+                        <button
+                          type="button"
+                          onPointerDown={(e) => {
+                            e.stopPropagation();
+                            onDeleteElement?.(selectedElement.id);
+                          }}
+                          className="p-1 rounded-md text-slate-600 hover:text-rose-600 hover:bg-rose-50 transition"
+                          title="Hapus (Delete)"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+
+                        {selectedElement.type === 'text' && (
+                          <button
+                            type="button"
+                            onPointerDown={(e) => {
+                              e.stopPropagation();
+                              setEditingElementId(selectedElement.id);
+                            }}
+                            className="p-1 rounded-md text-blue-600 hover:bg-blue-50 transition flex items-center gap-1 text-[10px] font-semibold px-1"
+                            title="Tulis teks (Double-click)"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </>
                     )}
                   </>
                 )}

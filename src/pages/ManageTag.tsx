@@ -358,8 +358,8 @@ export default function ManageTag() {
       const maxDim = targetType === 'avatar' ? 600 : 1200;
       const { blob, fileName, sizeKB } = await compressImageToKB(file, maxDim, maxDim, 0.82);
 
-      // 2. Upload 100% ke Google Drive via Serverless API
-      const gdriveRes = await uploadToGoogleDrive(blob, fileName);
+      // 2. Upload ke Google Drive — folder sesuai jenis: avatar→profile, cover→background
+      const gdriveRes = await uploadToGoogleDrive(blob, fileName, targetType === 'avatar' ? 'profile' : 'background');
       const publicUrl = gdriveRes.directUrl || gdriveRes.link;
 
       if (targetType === 'avatar') {

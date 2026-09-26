@@ -121,9 +121,9 @@ function CanvasElementRendererComponent({
           style={{
             opacity: el.opacity !== undefined ? el.opacity / 100 : 1,
             borderRadius: el.borderRadius ? `${el.borderRadius}px` : undefined,
-            overflow: el.borderRadius ? 'hidden' : undefined
+            overflow: 'hidden'
           }}
-          className="w-full h-full pointer-events-none flex items-center justify-center"
+          className="w-full h-full pointer-events-none"
         >
           {el.imageUrl ? (
             <img
@@ -150,7 +150,7 @@ function CanvasElementRendererComponent({
                   if (match) target.src = `https://lh3.googleusercontent.com/d/${match[1]}`;
                 }
               }}
-              className="w-full h-full object-contain pointer-events-none select-none"
+              className="w-full h-full object-cover pointer-events-none select-none"
             />
           ) : (
             <div className="w-full h-full bg-slate-100 border border-dashed border-slate-300 flex items-center justify-center text-slate-400 text-xs">

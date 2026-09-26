@@ -11,6 +11,7 @@ import { StudioSidebarLeft } from './studio/StudioSidebarLeft';
 import { StudioArtboard } from './studio/StudioArtboard';
 import { StudioSidebarRight } from './studio/StudioSidebarRight';
 import { renderSideToCanvas } from './studio/exportCanvas';
+import { ExportPreviewModal } from './studio/ExportPreviewModal';
 import type { CanvasElement, CardSide } from './studio/types';
 import { uploadToGoogleDrive } from '@/lib/gdrive';
 
@@ -455,7 +456,8 @@ export function TagDesignStudio({ tag, onClose, onTagUpdated }: TagDesignStudioP
     const guides: any = {};
 
     if (store.snapEnabled && curElem) {
-      const snapThresholdPct = 1.6;
+      // ponytail: threshold 3% agar snap center terasa (was 1.6% — terlalu kecil)
+      const snapThresholdPct = 3;
       if (Math.abs(targetX - 50) < snapThresholdPct) {
         targetX = 50;
         guides.vCenter = true;
@@ -467,7 +469,7 @@ export function TagDesignStudio({ tag, onClose, onTagUpdated }: TagDesignStudioP
 
       const curLeftEdge = Math.round((targetX / 100) * store.dimensions.width - curElem.width / 2);
       const curRightEdge = Math.round(store.dimensions.width - ((targetX / 100) * store.dimensions.width + curElem.width / 2));
-      const snapThresholdPx = 5;
+      const snapThresholdPx = 8;
 
       if (Math.abs(curLeftEdge - curRightEdge) <= snapThresholdPx) {
         targetX = 50;
@@ -735,6 +737,37 @@ export function TagDesignStudio({ tag, onClose, onTagUpdated }: TagDesignStudioP
     }, 400);
   };
 
+  // State Modal Preview Cetak Gambar
+  const [isPreviewOpen, setIsPreviewOpen] = React.useState(false);
+  const [previewFrontImg, setPreviewFrontImg] = React.useState<string>('');
+  const [previewBackImg, setPreviewBackImg] = React.useState<string>('');
+
+  const handleOpenExportPreview = async () => {
+    const toastId = toast.loading('Merender pratinjau gambar 4K...');
+    try {
+      const frontPng = await renderSideToCanvas(
+        store.dimensions,
+        store.frontHistory.present,
+        store.activeTemplateFront,
+        store.bgImageFront,
+        qrDataUrl
+      );
+      const backPng = await renderSideToCanvas(
+        store.dimensions,
+        store.backHistory.present,
+        store.activeTemplateBack,
+        store.bgImageBack,
+        qrDataUrl
+      );
+      setPreviewFrontImg(frontPng || '');
+      setPreviewBackImg(backPng || '');
+      setIsPreviewOpen(true);
+      toast.dismiss(toastId);
+    } catch (err: any) {
+      toast.error('Gagal membuat pratinjau cetak: ' + (err?.message || err), { id: toastId });
+    }
+  };
+
   const currentElements = store.getCurrentElements();
   const selectedElement = currentElements.find((el) => el.id === store.selectedElementId);
   const selectedDistances = selectedElement ? getElementWallDistances(selectedElement) : null;
@@ -753,6 +786,7 @@ export function TagDesignStudio({ tag, onClose, onTagUpdated }: TagDesignStudioP
         onResetLayout={() => store.resetCurrentLayout(tag.business_name)}
         onExportPNG={handleExportPNG}
         onExportBothSides={handleExportBothSides}
+        onOpenExportPreview={handleOpenExportPreview}
         onClose={onClose}
         canUndo={store.canUndo()}
         canRedo={store.canRedo()}
@@ -874,6 +908,25 @@ export function TagDesignStudio({ tag, onClose, onTagUpdated }: TagDesignStudioP
           isInteracting={isDragging || isResizing || isRotating}
         />
       </div>
+
+      {/* Modal Pratinjau Gambar Hasil Cetak Sebelum Download */}
+      <ExportPreviewModal
+        isOpen={isPreviewOpen}
+        onClose={() => setIsPreviewOpen(false)}
+        tagId={tag.id}
+        cardPreset={store.cardPreset}
+        frontImgUrl={previewFrontImg}
+        backImgUrl={previewBackImg}
+        activeSide={store.activeSide}
+        dimensions={store.dimensions}
+        onConfirmDownload={(side) => {
+          if (side === 'both') {
+            handleExportBothSides();
+          } else {
+            handleExportPNG(side || store.activeSide);
+          }
+        }}
+      />
     </div>
   );
 }

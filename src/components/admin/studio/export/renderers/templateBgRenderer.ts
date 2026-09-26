@@ -32,16 +32,19 @@ export function renderTemplateBackground(rc: RenderContext) {
     ctx.fillStyle = pCol || '#0a0a0a';
     ctx.fillRect(left, top, el.width, el.height * 0.44);
 
+    const curveTop = top + el.height * 0.35;
+    const curveH = el.height * 0.18;
+
     ctx.fillStyle = sCol || '#ffffff';
     ctx.beginPath();
-    ctx.moveTo(left, top + el.height * 0.38);
+    ctx.moveTo(left, curveTop + curveH * 0.25);
     ctx.bezierCurveTo(
-      left + el.width * 0.28,
-      top + el.height * 0.46,
-      left + el.width * 0.72,
-      top + el.height * 0.46,
+      left + el.width * (140 / 520),
+      curveTop + curveH * 0.75,
+      left + el.width * (380 / 520),
+      curveTop + curveH * 0.75,
       left + el.width,
-      top + el.height * 0.38
+      curveTop + curveH * 0.25
     );
     ctx.lineTo(left + el.width, top + el.height);
     ctx.lineTo(left, top + el.height);
@@ -51,13 +54,13 @@ export function renderTemplateBackground(rc: RenderContext) {
     ctx.strokeStyle = '#cbd5e1';
     ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.moveTo(0, top + el.height * 0.54);
-    ctx.lineTo(0, top + el.height * 0.62);
+    ctx.moveTo(0, top + el.height * 0.52);
+    ctx.lineTo(0, top + el.height * 0.52 + 32);
     ctx.stroke();
 
     ctx.beginPath();
-    ctx.moveTo(0, top + el.height * 0.74);
-    ctx.lineTo(0, top + el.height * 0.82);
+    ctx.moveTo(0, top + el.height * 0.72);
+    ctx.lineTo(0, top + el.height * 0.72 + 32);
     ctx.stroke();
   } else if (variant === 'frame_quad') {
     const framePadding = 16;

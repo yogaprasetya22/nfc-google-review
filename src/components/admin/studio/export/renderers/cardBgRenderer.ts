@@ -32,10 +32,21 @@ export const backgroundRendererRegistry: Record<string, BackgroundRenderer> = {
     ctx.fillStyle = '#0a0a0a';
     ctx.fillRect(0, 0, W, H * 0.44);
 
+    // Wave/Curve SVG identik viewBox 0 0 520 100 (M0,25 C140,75 380,75 520,25 L520,100 L0,100 Z)
+    const curveTop = H * 0.35;
+    const curveH = H * 0.18;
+
     ctx.fillStyle = '#ffffff';
     ctx.beginPath();
-    ctx.moveTo(0, H * 0.38);
-    ctx.bezierCurveTo(W * 0.28, H * 0.46, W * 0.72, H * 0.46, W, H * 0.38);
+    ctx.moveTo(0, curveTop + curveH * 0.25);
+    ctx.bezierCurveTo(
+      W * (140 / 520),
+      curveTop + curveH * 0.75,
+      W * (380 / 520),
+      curveTop + curveH * 0.75,
+      W,
+      curveTop + curveH * 0.25
+    );
     ctx.lineTo(W, H);
     ctx.lineTo(0, H);
     ctx.closePath();
@@ -44,13 +55,13 @@ export const backgroundRendererRegistry: Record<string, BackgroundRenderer> = {
     ctx.strokeStyle = '#cbd5e1';
     ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.moveTo(W / 2, H * 0.54);
-    ctx.lineTo(W / 2, H * 0.62);
+    ctx.moveTo(W / 2, H * 0.52);
+    ctx.lineTo(W / 2, H * 0.52 + 32);
     ctx.stroke();
 
     ctx.beginPath();
-    ctx.moveTo(W / 2, H * 0.74);
-    ctx.lineTo(W / 2, H * 0.82);
+    ctx.moveTo(W / 2, H * 0.72);
+    ctx.lineTo(W / 2, H * 0.72 + 32);
     ctx.stroke();
   },
 

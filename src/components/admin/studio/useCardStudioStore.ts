@@ -150,11 +150,19 @@ export const useCardStudioStore = create<CardStudioState>((set, get) => ({
   isSaving: false,
   customTemplates: [],
 
-  initializeStudio: (tag: any) => {
+  initializeStudio: async (tag: any) => {
     get().fetchCustomTemplates();
     const saved = tag?.hub_config?.card_design;
     const frontKey = `studio_elements_front_${tag?.id}`;
     const backKey = `studio_elements_back_${tag?.id}`;
+
+    const preset: CardPreset = (saved?.preset as CardPreset) || 'card_v';
+    const defaultTemplateFront: TemplateType =
+      preset === 'square' ? 'google_black_curve' : 'google_multicolor_pop_v';
+    const defaultTemplateBack: TemplateType = 'google_back_qr_focus';
+
+    const activeTemplateFront = (saved?.front?.template as TemplateType) || defaultTemplateFront;
+    const activeTemplateBack = (saved?.back?.template as TemplateType) || defaultTemplateBack;
 
     let frontElems = saved?.front?.elements;
     if (!frontElems || !Array.isArray(frontElems) || frontElems.length === 0) {
@@ -164,9 +172,6 @@ export const useCardStudioStore = create<CardStudioState>((set, get) => ({
       } catch (e) {
         // safe
       }
-    }
-    if (!frontElems || frontElems.length === 0) {
-      frontElems = DEFAULT_BLANK_ELEMENTS;
     }
 
     let backElems = saved?.back?.elements;
@@ -178,17 +183,52 @@ export const useCardStudioStore = create<CardStudioState>((set, get) => ({
         // safe
       }
     }
-    if (!backElems || backElems.length === 0) {
-      backElems = DEFAULT_BLANK_ELEMENTS;
+
+    // Jika belum ada elemen custom tersimpan, ambil template resmi starter sesuai template / preset
+    let starters: CustomTemplate[] = [];
+    if (
+      (!frontElems || frontElems.length === 0) ||
+      (!backElems || backElems.length === 0)
+    ) {
+      try {
+        starters = await loadExternalStarterTemplates();
+      } catch {
+        // safe
+      }
     }
 
-    const preset: CardPreset = (saved?.preset as CardPreset) || 'card_v';
+    if (!frontElems || frontElems.length === 0) {
+      const foundFront = starters.find(
+        (t) =>
+          t.id === activeTemplateFront ||
+          (preset === 'card_v' && t.id === 'google_multicolor_pop_v') ||
+          (preset === 'square' && t.id === 'google_black_curve')
+      );
+      if (foundFront && foundFront.elements?.length) {
+        frontElems = foundFront.elements;
+      } else {
+        frontElems = DEFAULT_BLANK_ELEMENTS;
+      }
+    }
+
+    if (!backElems || backElems.length === 0) {
+      const foundBack = starters.find(
+        (t) =>
+          t.id === activeTemplateBack ||
+          t.id === 'google_back_qr_focus'
+      );
+      if (foundBack && foundBack.elements?.length) {
+        backElems = foundBack.elements;
+      } else {
+        backElems = DEFAULT_BLANK_ELEMENTS;
+      }
+    }
 
     set({
       cardPreset: preset,
       dimensions: DIMENSIONS_MAP[preset] || DIMENSIONS_MAP.card_v,
-      activeTemplateFront: (saved?.front?.template as TemplateType) || 'google_multicolor_pop',
-      activeTemplateBack: (saved?.back?.template as TemplateType) || 'google_back_qr_focus',
+      activeTemplateFront,
+      activeTemplateBack,
       bgImageFront: saved?.front?.bgImage || null,
       bgImageBack: saved?.back?.bgImage || null,
       frontHistory: createInitialHistory(frontElems),

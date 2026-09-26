@@ -20,9 +20,11 @@ export interface GDriveFile {
   thumbnailUrl: string;
 }
 
+/** folderType: 'profile' → GDRIVE_FOLDER_ID_PROFILE, 'background' → GDRIVE_FOLDER_ID_BACKGROUND, undefined → default */
 export async function uploadToGoogleDrive(
   file: File | Blob,
-  fileName?: string
+  fileName?: string,
+  folderType?: 'profile' | 'background'
 ): Promise<GDriveUploadResult> {
   const formData = new FormData();
   if (file instanceof File) {
@@ -30,6 +32,7 @@ export async function uploadToGoogleDrive(
   } else {
     formData.append('file', file, fileName || `file-${Date.now()}`);
   }
+  if (folderType) formData.append('folderType', folderType);
 
   const response = await fetch('/api/upload', {
     method: 'POST',

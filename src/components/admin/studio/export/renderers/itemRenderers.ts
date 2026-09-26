@@ -123,14 +123,31 @@ export function renderLogoGoogle(rc: RenderContext) {
   }
 }
 
-// Render 5 Bintang Emas
+// Render 5 Bintang Emas (Vektor Geometris Presisi 100% Identik Lucide React Canvas)
 export function renderStars5(rc: RenderContext) {
-  const { ctx } = rc;
-  ctx.fillStyle = '#eab308';
-  ctx.font = '22px sans-serif';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText('★★★★★', 0, 0);
+  const { ctx, element: el, left, top } = rc;
+  const starCount = 5;
+  const starGap = 6;
+  const totalGap = starGap * (starCount - 1);
+  const starSize = Math.min(el.height, (el.width - totalGap) / starCount);
+  const totalWidth = starSize * starCount + totalGap;
+  const startX = -totalWidth / 2;
+
+  // Path SVG Lucide Star: M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z (viewBox 0 0 24 24)
+  const lucideStarPath = new Path2D(
+    'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z'
+  );
+
+  ctx.fillStyle = '#f59e0b';
+  for (let i = 0; i < starCount; i++) {
+    const sX = startX + i * (starSize + starGap);
+    const sY = -starSize / 2;
+    ctx.save();
+    ctx.translate(sX, sY);
+    ctx.scale(starSize / 24, starSize / 24);
+    ctx.fill(lucideStarPath);
+    ctx.restore();
+  }
 }
 
 // Render Tombol Pill "Review us on Google"

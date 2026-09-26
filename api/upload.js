@@ -20,18 +20,23 @@ export default async function handler(req, res) {
       maxFileSize: 25 * 1024 * 1024
     });
 
-    const [, files] = await form.parse(req);
+    const [fields, files] = await form.parse(req);
     const file = files.file ? (Array.isArray(files.file) ? files.file[0] : files.file) : null;
 
     if (!file) {
       return res.status(400).json({ success: false, error: 'Tidak ada file yang diunggah.' });
     }
 
+    // folderType: 'profile' | 'background' | undefined (default)
+    const folderType = fields.folderType ? (Array.isArray(fields.folderType) ? fields.folderType[0] : fields.folderType) : undefined;
+
     // 2. Ambil OAuth credentials (dari env var Vercel atau fallback local file gdrive_oauth.json)
     let clientId = process.env.GDRIVE_CLIENT_ID;
     let clientSecret = process.env.GDRIVE_CLIENT_SECRET;
     let refreshToken = process.env.GDRIVE_REFRESH_TOKEN;
-    let folderId = process.env.GDRIVE_FOLDER_ID || '16tAjCfyklYBH2Jv2XEYYyKcLSEIx74d7';
+    let defaultFolderId = process.env.GDRIVE_FOLDER_ID || '16tAjCfyklYBH2Jv2XEYYyKcLSEIx74d7';
+    let profileFolderId = process.env.GDRIVE_FOLDER_ID_PROFILE;
+    let backgroundFolderId = process.env.GDRIVE_FOLDER_ID_BACKGROUND;
 
     if (!refreshToken && fs.existsSync('gdrive_oauth.json')) {
       try {
@@ -39,11 +44,18 @@ export default async function handler(req, res) {
         clientId = clientId || localCreds.client_id;
         clientSecret = clientSecret || localCreds.client_secret;
         refreshToken = refreshToken || localCreds.refresh_token;
-        folderId = folderId || localCreds.folder_id;
+        defaultFolderId = defaultFolderId || localCreds.folder_id;
+        profileFolderId = profileFolderId || localCreds.folder_id_profile;
+        backgroundFolderId = backgroundFolderId || localCreds.folder_id_background;
       } catch (e) {
         console.warn('Gagal membaca gdrive_oauth.json:', e);
       }
     }
+
+    // Pilih folder berdasarkan folderType
+    let folderId = defaultFolderId;
+    if (folderType === 'profile' && profileFolderId) folderId = profileFolderId;
+    else if (folderType === 'background' && backgroundFolderId) folderId = backgroundFolderId;
 
     if (!clientId || !clientSecret || !refreshToken) {
       return res.status(500).json({

@@ -48,7 +48,7 @@ export function TextRenderer({
           textAlign: el.textAlign || 'center',
           textDecoration: el.textDecoration || 'none'
         }}
-        className="tracking-tight px-1 py-0.5 leading-tight w-full h-full bg-transparent border border-blue-500 rounded outline-none resize-none shadow-sm z-50 cursor-text overflow-hidden"
+        className="tracking-tight px-1 py-0.5 leading-tight w-full h-full bg-transparent border border-blue-500 rounded outline-none resize-none z-[999] cursor-text overflow-hidden relative"
         rows={1}
       />
     );

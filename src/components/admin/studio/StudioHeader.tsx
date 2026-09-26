@@ -16,7 +16,8 @@ import {
   Square,
   Smartphone,
   CreditCard,
-  MoreVertical
+  MoreVertical,
+  Eye
 } from 'lucide-react';
 import type { CardPreset, CardSide } from './types';
 import type { NfcTagEntity } from '@/types/nfc';
@@ -30,6 +31,7 @@ interface StudioHeaderProps {
   onResetLayout: () => void;
   onExportPNG: (side?: CardSide) => void;
   onExportBothSides: () => void;
+  onOpenExportPreview?: () => void;
   onClose: () => void;
   canUndo?: boolean;
   canRedo?: boolean;
@@ -57,6 +59,7 @@ function StudioHeaderComponent({
   onResetLayout,
   onExportPNG,
   onExportBothSides,
+  onOpenExportPreview,
   onClose,
   canUndo = false,
   canRedo = false,
@@ -336,7 +339,13 @@ function StudioHeaderComponent({
           <div className="flex items-center">
             <Button
               size="sm"
-              onClick={() => onExportPNG(activeSide)}
+              onClick={() => {
+                if (onOpenExportPreview) {
+                  onOpenExportPreview();
+                } else {
+                  onExportPNG(activeSide);
+                }
+              }}
               className="bg-neutral-900 hover:bg-neutral-800 text-white text-xs font-semibold h-8 px-2.5 sm:px-3 rounded-l-lg rounded-r-none shadow-xs border-r border-neutral-700"
             >
               <Download className="h-3.5 w-3.5 mr-1 sm:mr-1.5" />
@@ -353,7 +362,27 @@ function StudioHeaderComponent({
           </div>
 
           {showExportMenu && (
-            <div className="absolute right-0 mt-1 w-56 bg-white border border-slate-200 rounded-xl shadow-xl py-1.5 z-50 text-xs font-semibold animate-in fade-in zoom-in-95">
+            <div className="absolute right-0 mt-1 w-64 bg-white border border-slate-200 rounded-xl shadow-xl py-1.5 z-50 text-xs font-semibold animate-in fade-in zoom-in-95">
+              {onOpenExportPreview && (
+                <>
+                  <button
+                    onClick={() => {
+                      onOpenExportPreview();
+                      setShowExportMenu(false);
+                    }}
+                    className="w-full px-3.5 py-2.5 text-left text-blue-600 hover:bg-blue-50/80 flex items-center justify-between font-bold border-b border-slate-100"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Eye className="w-4 h-4 text-blue-600" />
+                      <span>Preview Hasil Cetak</span>
+                    </div>
+                    <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-mono font-bold">
+                      Gambar
+                    </span>
+                  </button>
+                </>
+              )}
+
               <button
                 onClick={() => {
                   onExportPNG('front');
